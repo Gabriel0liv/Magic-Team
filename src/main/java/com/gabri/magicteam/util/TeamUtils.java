@@ -10,8 +10,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.scores.Team;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 public class TeamUtils {
     
+    private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
+    private static final long MESSAGE_COOLDOWN_MS = 1000;
+
     /**
      * Checks if two entities are on the same Vanilla team.
      */
@@ -20,12 +27,6 @@ public class TeamUtils {
         Team teamA = a.getTeam();
         Team teamB = b.getTeam();
         boolean allies = teamA != null && teamA.isAlliedTo(teamB);
-        
-        // DEBUG LOGGING (Console)
-        if (allies) {
-            System.out.println("[MagicTeam] DEBUG: " + a.getName().getString() + " and " + b.getName().getString() + " ARE allies on team " + teamA.getName());
-        }
-        
         return allies;
     }
 
@@ -34,10 +35,16 @@ public class TeamUtils {
      */
     public static void sendProtectionMessage(Entity caster) {
         if (caster instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(
-                Component.translatable("ui.magic_team.ally_protection")
-                    .withStyle(ChatFormatting.RED)
-            ));
+            long now = System.currentTimeMillis();
+            long last = LAST_MESSAGE_TIME.getOrDefault(serverPlayer.getUUID(), 0L);
+            
+            if (now - last > MESSAGE_COOLDOWN_MS) {
+                serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(
+                    Component.translatable("ui.magic_team.ally_protection")
+                        .withStyle(ChatFormatting.RED)
+                ));
+                LAST_MESSAGE_TIME.put(serverPlayer.getUUID(), now);
+            }
         }
     }
 
