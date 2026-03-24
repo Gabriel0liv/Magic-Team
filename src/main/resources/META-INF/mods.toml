@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+    modId="magic_team"
+    version="1.0.0"
+    displayName="Magic Team"
+    authors="Gabri"
+    displayTest="IGNORE_SERVER_VERSION"
+    description='''
+    Server-side addon for Iron's Spells that enforces Vanilla team rules for spell targeting and damage protection.
+    '''
+
+[[dependencies.magic_team]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.magic_team]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.magic_team]]
+    modId="irons_spellbooks"
+    mandatory=true
+    versionRange="[1.20.1-3.15.3,)"
+    ordering="AFTER"
+    side="BOTH"
