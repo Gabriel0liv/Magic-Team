@@ -21,6 +21,9 @@ public class MagicTeam {
         
         // Register Command
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+        
+        // Load Bypass Persistence
+        com.gabri.magicteam.util.TeamUtils.loadBypassData();
     }
 
     private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {

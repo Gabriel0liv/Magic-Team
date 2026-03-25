@@ -3,7 +3,6 @@ package com.gabri.magicteam.mixin;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
-import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import com.gabri.magicteam.util.TeamUtils;
 import com.gabri.magicteam.MagicTeamConfig;
 import net.minecraft.world.entity.LivingEntity;
@@ -53,7 +52,7 @@ public class UtilsMixin {
     private static Predicate<LivingEntity> wrapPredicate(Predicate<LivingEntity> original, LivingEntity caster, AbstractSpell spell) {
         if (!MagicTeamConfig.SERVER.enableTargetingBlock.get()) return original;
 
-        if (spell != null && isHarmful(spell)) {
+        if (spell != null && TeamUtils.isHarmful(spell)) {
             return (target) -> {
                 boolean isAlly = TeamUtils.areAllies(caster, target);
                 if (isAlly) {
@@ -66,39 +65,6 @@ public class UtilsMixin {
         return original;
     }
 
-    private static boolean isHarmful(AbstractSpell spell) {
-        if (spell == null) return false;
-
-        String id = spell.getSpellId().toLowerCase();
-        
-        // 1. Verificar se está na blacklist (magias ofensivas explicitas)
-        // Suporta tanto "smite" quanto "irons_spellbooks:smite"
-        boolean isExplicitlyHarmful = MagicTeamConfig.SERVER.explicitHarmfulSpells.get().stream()
-                .anyMatch(harmfulStr -> {
-                    String h = harmfulStr.toLowerCase();
-                    return id.equals(h) || id.equals("irons_spellbooks:" + h) || id.contains(":" + h);
-                });
-        
-        if (isExplicitlyHarmful) return true;
-        
-        // 2. Verificar se está na whitelist (magias de suporte/buff)
-        boolean isSupport = MagicTeamConfig.SERVER.beneficialSpells.get().stream()
-                .anyMatch(beneficialStr -> {
-                    String b = beneficialStr.toLowerCase();
-                    return id.equals(b) || id.equals("irons_spellbooks:" + b) || id.contains(":" + b);
-                });
-
-        if (isSupport) return false;
-        
-        // 3. Fallback: Se for da escola HOLY e não está na blacklist, é de suporte
-        try {
-            if (spell.getSchoolType().getId().equals(SchoolRegistry.HOLY_RESOURCE)) {
-                return false;
-            }
-        } catch (Exception e) {}
-
-        return true;
-    }
 
     /**
      * Hook para o Raycast visual (remove o outline instantaneamente).

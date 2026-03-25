@@ -20,7 +20,16 @@ public class TeamUtils {
     public static final Set<UUID> BYPASSED_PLAYERS = new HashSet<>();
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
+    
+    public static void loadBypassData() {
+        BYPASSED_PLAYERS.clear();
+        BYPASSED_PLAYERS.addAll(BypassDataStorage.load());
+    }
 
+    public static void saveBypassData() {
+        BypassDataStorage.save(BYPASSED_PLAYERS);
+    }
+    
     /**
      * Checks if two entities are on the same Vanilla team, including owner resolution for summons.
      */
@@ -96,8 +105,38 @@ public class TeamUtils {
         return true;
     }
 
-    public static boolean isSpellBeneficial(AbstractSpell spell) {
+    /**
+     * Centralized logic to determine if a spell is harmful.
+     * Checks explicit harmful list, beneficial list, and fallback to school type.
+     */
+    public static boolean isHarmful(AbstractSpell spell) {
         if (spell == null) return false;
-        return spell.getSchoolType().toString().toLowerCase().contains("holy");
+
+        String id = spell.getSpellId().toLowerCase();
+        
+        // 1. Check explicit harmful blacklist
+        boolean isExplicitlyHarmful = com.gabri.magicteam.MagicTeamConfig.SERVER.explicitHarmfulSpells.get().stream()
+                .anyMatch(harmfulStr -> {
+                    String h = harmfulStr.toLowerCase();
+                    return id.equals(h) || id.equals("irons_spellbooks:" + h) || id.contains(":" + h);
+                });
+        
+        if (isExplicitlyHarmful) return true;
+        
+        // 2. Check beneficial whitelist
+        boolean isBeneficial = com.gabri.magicteam.MagicTeamConfig.SERVER.beneficialSpells.get().stream()
+                .anyMatch(beneficialStr -> {
+                    String b = beneficialStr.toLowerCase();
+                    return id.equals(b) || id.equals("irons_spellbooks:" + b) || id.contains(":" + b);
+                });
+
+        if (isBeneficial) return false;
+        
+        // 3. Fallback: Everything else is considered harmful by default (to be safe)
+        return true;
+    }
+
+    public static boolean isSpellBeneficial(AbstractSpell spell) {
+        return !isHarmful(spell);
     }
 }

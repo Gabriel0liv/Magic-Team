@@ -4,10 +4,8 @@ import com.gabri.magicteam.util.TeamUtils;
 import com.gabri.magicteam.MagicTeamConfig;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.Entity; // Added this import as it's used in the method signature
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -24,18 +22,7 @@ public abstract class LivingEntityMixin {
 
         if (source == null) return;
 
-        Entity trueSource = source;
-
-        // Extract true caster from projectiles
-        if (source instanceof Projectile projectile) {
-            trueSource = projectile.getOwner();
-        } 
-        // Extract true caster from area clouds
-        else if (source instanceof AreaEffectCloud cloud) {
-            trueSource = cloud.getOwner();
-        }
-        // Fallback for Iron's Spells custom entities (if they don't implement Projectile/AreaEffectCloud)
-        // Many ISS projectiles inherit from Projectile, so they are covered.
+        Entity trueSource = TeamUtils.getRootOwner(source);
         
         if (trueSource == null || trueSource == (Object) this) return;
 

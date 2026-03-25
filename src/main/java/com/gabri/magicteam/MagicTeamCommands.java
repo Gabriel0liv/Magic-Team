@@ -194,16 +194,18 @@ public class MagicTeamCommands {
         java.util.UUID uuid = target.getUUID();
         if (com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.contains(uuid)) {
             com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.remove(uuid);
+            com.gabri.magicteam.util.TeamUtils.saveBypassData();
             source.sendSuccess(() -> Component.translatable("magic_team.bypass.disabled").append(" -> ").append(target.getDisplayName()).withStyle(ChatFormatting.RED), true);
         } else {
             com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.add(uuid);
+            com.gabri.magicteam.util.TeamUtils.saveBypassData();
             source.sendSuccess(() -> Component.translatable("magic_team.bypass.enabled").append(" -> ").append(target.getDisplayName()).withStyle(ChatFormatting.GREEN), true);
         }
         return 1;
     }
 
     private static int viewFilters(CommandSourceStack source, String listType) {
-        java.util.List<? extends String> configList = listType.equals("beneficial") ? MagicTeamConfig.SERVER.beneficialSpells.get() : MagicTeamConfig.SERVER.explicitHarmfulSpells.get();
+        var configList = listType.equals("beneficial") ? MagicTeamConfig.SERVER.beneficialSpells.get() : MagicTeamConfig.SERVER.explicitHarmfulSpells.get();
         Component filterName = Component.translatable(listType.equals("beneficial") ? "magic_team.command.filter.beneficial" : "magic_team.command.filter.harmful");
         
         source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.header", filterName).withStyle(ChatFormatting.GOLD), false);
