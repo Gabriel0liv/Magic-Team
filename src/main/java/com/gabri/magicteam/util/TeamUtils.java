@@ -18,7 +18,6 @@ import java.util.HashSet;
 
 public class TeamUtils {
     public static final Set<UUID> BYPASSED_PLAYERS = new HashSet<>();
-    public static final ThreadLocal<Boolean> LAST_BLOCK_WAS_ALLY = ThreadLocal.withInitial(() -> false);
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
 

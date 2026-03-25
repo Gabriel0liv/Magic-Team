@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -21,8 +20,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import java.util.function.Predicate;
 
 @Mixin(value = Utils.class, remap = false)
@@ -60,7 +57,7 @@ public class UtilsMixin {
             return (target) -> {
                 boolean isAlly = TeamUtils.areAllies(caster, target);
                 if (isAlly) {
-                    TeamUtils.LAST_BLOCK_WAS_ALLY.set(true); // Sinaliza para substituição da mensagem no Redirect
+                    TeamUtils.sendBlockedMessage(caster);
                     return false;
                 }
                 return original == null || original.test(target);
@@ -101,46 +98,6 @@ public class UtilsMixin {
         } catch (Exception e) {}
 
         return true;
-    }
-
-    /**
-     * Suprime a mensagem genérica do ISS ("Requires a target") se acabarmos de bloquear por ser aliado.
-     * Versão 3.15.3 (Criação de pacote direta)
-     */
-    @SuppressWarnings("all")
-    @Redirect(method = {
-        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Lnet/minecraft/world/entity/LivingEntity;",
-        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z"
-    }, 
-    at = @At(value = "NEW", target = "net/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket"),
-    remap = false, require = 0)
-    private static ClientboundSetActionBarTextPacket onCastErrorTargetMessage(Component component) {
-        if (TeamUtils.LAST_BLOCK_WAS_ALLY.get()) {
-            TeamUtils.LAST_BLOCK_WAS_ALLY.set(false); // Reset
-            return new ClientboundSetActionBarTextPacket(net.minecraft.network.chat.Component.translatable("magic_team.message.blocked").withStyle(net.minecraft.ChatFormatting.RED));
-        }
-        return new ClientboundSetActionBarTextPacket(component != null ? component : Component.empty());
-    }
-
-    /**
-     * Versão 3.15.4+ (Chamada de método de mensagem)
-     * Tentamos capturar chamadas de sendSystemMessage ou similares.
-     */
-    @SuppressWarnings("all")
-    @Redirect(method = {
-        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Lnet/minecraft/world/entity/LivingEntity;",
-        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z"
-    },
-    at = @At(value = "INVOKE", 
-             target = "Lnet/minecraft/world/entity/player/Player;displayClientMessage(Lnet/minecraft/network/chat/Component;Z)V"),
-    remap = false, require = 0)
-    private static void onCastErrorTargetMessage_3154(net.minecraft.world.entity.player.Player player, Component component, boolean actionBar) {
-        if (TeamUtils.LAST_BLOCK_WAS_ALLY.get()) {
-            TeamUtils.LAST_BLOCK_WAS_ALLY.set(false); // Reset
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("magic_team.message.blocked").withStyle(net.minecraft.ChatFormatting.RED), true);
-            return;
-        }
-        player.displayClientMessage(component, actionBar);
     }
 
     /**
