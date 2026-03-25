@@ -3,7 +3,7 @@ package com.gabri.magicteam.util;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,9 +13,12 @@ import net.minecraft.world.scores.Team;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
 
 public class TeamUtils {
-    
+    public static final Set<UUID> BYPASSED_PLAYERS = new HashSet<>();
+    public static final ThreadLocal<Boolean> LAST_BLOCK_WAS_ALLY = ThreadLocal.withInitial(() -> false);
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
 
@@ -24,6 +27,11 @@ public class TeamUtils {
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) return false;
+        
+        if (a instanceof ServerPlayer playerA && BYPASSED_PLAYERS.contains(playerA.getUUID())) {
+            return false;
+        }
+
         Team teamA = a.getTeam();
         Team teamB = b.getTeam();
         boolean allies = teamA != null && teamA.isAlliedTo(teamB);
@@ -33,17 +41,15 @@ public class TeamUtils {
     /**
      * In-game feedback for blocking.
      */
-    public static void sendProtectionMessage(Entity caster) {
-        if (caster instanceof ServerPlayer serverPlayer) {
+    @SuppressWarnings("null")
+    public static void sendBlockedMessage(Entity entity) {
+        if (entity instanceof ServerPlayer player) {
             long now = System.currentTimeMillis();
-            long last = LAST_MESSAGE_TIME.getOrDefault(serverPlayer.getUUID(), 0L);
+            long last = LAST_MESSAGE_TIME.getOrDefault(player.getUUID(), 0L);
             
             if (now - last > MESSAGE_COOLDOWN_MS) {
-                serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(
-                    Component.translatable("ui.magic_team.ally_protection")
-                        .withStyle(ChatFormatting.RED)
-                ));
-                LAST_MESSAGE_TIME.put(serverPlayer.getUUID(), now);
+                player.sendSystemMessage(Component.translatable("magic_team.message.blocked").withStyle(ChatFormatting.RED), true);
+                LAST_MESSAGE_TIME.put(player.getUUID(), now);
             }
         }
     }

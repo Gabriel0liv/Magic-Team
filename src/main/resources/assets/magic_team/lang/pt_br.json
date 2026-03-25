@@ -1,3 +1,21 @@
 {
-  "ui.magic_team.ally_protection": "Magia bloqueada: Alvo é um aliado!"
+  "magic_team.message.blocked": "Alvo inválido (Aliado)",
+  "magic_team.command.status.header": "--- Status do Magic Team ---",
+  "magic_team.command.status.targeting": "Bloqueio de mira (Targeting): ",
+  "magic_team.command.status.damage": "Bloqueio de dano (Damage): ",
+  "magic_team.command.status.effects": "Bloqueio de efeitos (Effects): ",
+  "magic_team.command.status.alliance": "Aliança global (Alliance): ",
+  "magic_team.command.status.enabled": "LIGADO",
+  "magic_team.command.status.disabled": "DESLIGADO",
+  "magic_team.command.status.filters_loaded": "Filtros Carregados: ",
+  "magic_team.command.status.filters_beneficial": " Benéficos",
+  "magic_team.command.status.filters_harmful": " Nocivos",
+  "magic_team.bypass.enabled": "Modo Bypass ATIVADO",
+  "magic_team.bypass.disabled": "Modo Bypass DESATIVADO",
+  "magic_team.command.filter.add.success": "Adicionado '%s' aos filtros %s!",
+  "magic_team.command.filter.add.exists": "'%s' já existe nos filtros %s!",
+  "magic_team.command.filter.remove.success": "Removido '%s' dos filtros %s!",
+  "magic_team.command.filter.remove.missing": "'%s' não estava nos filtros %s!",
+  "magic_team.command.filter.beneficial": "Benéficos",
+  "magic_team.command.filter.harmful": "Nocivos"
 }

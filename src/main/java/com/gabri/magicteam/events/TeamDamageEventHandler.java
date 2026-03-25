@@ -19,7 +19,7 @@ public class TeamDamageEventHandler {
                 event.setCanceled(true);
                 
                 // Visual Feedback
-                TeamUtils.sendProtectionMessage(attacker);
+                TeamUtils.sendBlockedMessage(attacker);
             }
         }
     }

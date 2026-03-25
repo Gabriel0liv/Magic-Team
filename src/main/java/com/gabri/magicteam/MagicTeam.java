@@ -13,11 +13,17 @@ public class MagicTeam {
     public static final String MODID = "magic_team";
 
     public MagicTeam() {
-        // The displayTest is now handled exclusively in META-INF/mods.toml 
-        // using displayTest="IGNORE_SERVER_VERSION" to satisfy modern Forge 1.20.1 
-        // and avoid IDE deprecation warnings for ModLoadingContext.get().
+        // Register Config
+        MagicTeamConfig.register();
 
         // Register the event handler for team damage protection
         MinecraftForge.EVENT_BUS.register(new TeamDamageEventHandler());
+        
+        // Register Command
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+    }
+
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        MagicTeamCommands.register(event.getDispatcher());
     }
 }

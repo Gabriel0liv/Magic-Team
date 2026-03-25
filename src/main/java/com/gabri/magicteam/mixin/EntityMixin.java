@@ -12,9 +12,9 @@ public abstract class EntityMixin {
 
     @Inject(method = "isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), cancellable = true)
     private void onIsAlliedTo(Entity other, CallbackInfoReturnable<Boolean> cir) {
+        if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableGlobalAlliance.get()) return;
+
         if (TeamUtils.areAllies((Entity) (Object) this, other)) {
-            // DEBUG LOGGING
-            System.out.println("[MagicTeam] EntityMixin: marking " + ((Entity)(Object)this).getName().getString() + " and " + other.getName().getString() + " as ALLIES");
             cir.setReturnValue(true);
         }
     }

@@ -1,3 +1,21 @@
 {
-  "ui.magic_team.ally_protection": "Magic blocked: Target is an ally!"
+  "magic_team.message.blocked": "Invalid target (Ally)",
+  "magic_team.command.status.header": "--- Magic Team Status ---",
+  "magic_team.command.status.targeting": "Targeting Block: ",
+  "magic_team.command.status.damage": "Damage Block: ",
+  "magic_team.command.status.effects": "Effect Block: ",
+  "magic_team.command.status.alliance": "Global Alliance: ",
+  "magic_team.command.status.enabled": "ENABLED",
+  "magic_team.command.status.disabled": "DISABLED",
+  "magic_team.command.status.filters_loaded": "Loaded Filters: ",
+  "magic_team.command.status.filters_beneficial": " Beneficial",
+  "magic_team.command.status.filters_harmful": " Harmful",
+  "magic_team.bypass.enabled": "Bypass Mode ENABLED",
+  "magic_team.bypass.disabled": "Bypass Mode DISABLED",
+  "magic_team.command.filter.add.success": "Added '%s' to %s filters!",
+  "magic_team.command.filter.add.exists": "'%s' is already in %s filters!",
+  "magic_team.command.filter.remove.success": "Removed '%s' from %s filters!",
+  "magic_team.command.filter.remove.missing": "'%s' was not found in %s filters!",
+  "magic_team.command.filter.beneficial": "Beneficial",
+  "magic_team.command.filter.harmful": "Harmful"
 }
