@@ -60,8 +60,7 @@ public class UtilsMixin {
             return (target) -> {
                 boolean isAlly = TeamUtils.areAllies(caster, target);
                 if (isAlly) {
-                    TeamUtils.sendBlockedMessage(caster);
-                    TeamUtils.LAST_BLOCK_WAS_ALLY.set(true); // Sinaliza para suprimir a mensagem genérica do ISS
+                    TeamUtils.LAST_BLOCK_WAS_ALLY.set(true); // Sinaliza para substituição da mensagem no Redirect
                     return false;
                 }
                 return original == null || original.test(target);
@@ -75,15 +74,22 @@ public class UtilsMixin {
 
         String id = spell.getSpellId().toLowerCase();
         
-        // 1. Verificar se está na blacklist (magias ofensivas explicitas) do config
+        // 1. Verificar se está na blacklist (magias ofensivas explicitas)
+        // Suporta tanto "smite" quanto "irons_spellbooks:smite"
         boolean isExplicitlyHarmful = MagicTeamConfig.SERVER.explicitHarmfulSpells.get().stream()
-                .anyMatch(harmfulStr -> id.contains(harmfulStr.toLowerCase()));
+                .anyMatch(harmfulStr -> {
+                    String h = harmfulStr.toLowerCase();
+                    return id.equals(h) || id.equals("irons_spellbooks:" + h) || id.contains(":" + h);
+                });
         
         if (isExplicitlyHarmful) return true;
         
-        // 2. Verificar se está na whitelist (magias de suporte/buff) do config
+        // 2. Verificar se está na whitelist (magias de suporte/buff)
         boolean isSupport = MagicTeamConfig.SERVER.beneficialSpells.get().stream()
-                .anyMatch(beneficialStr -> id.contains(beneficialStr.toLowerCase()));
+                .anyMatch(beneficialStr -> {
+                    String b = beneficialStr.toLowerCase();
+                    return id.equals(b) || id.equals("irons_spellbooks:" + b) || id.contains(":" + b);
+                });
 
         if (isSupport) return false;
         
@@ -94,23 +100,47 @@ public class UtilsMixin {
             }
         } catch (Exception e) {}
 
-        // 4. Todas as outras magias são assumidas como agressivas
         return true;
     }
 
     /**
      * Suprime a mensagem genérica do ISS ("Requires a target") se acabarmos de bloquear por ser aliado.
+     * Versão 3.15.3 (Criação de pacote direta)
      */
-    @SuppressWarnings("null")
-    @Redirect(method = "preCastTargetHelper", 
-              at = @At(value = "NEW", target = "net/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket"),
-              remap = false)
+    @SuppressWarnings("all")
+    @Redirect(method = {
+        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Lnet/minecraft/world/entity/LivingEntity;",
+        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z"
+    }, 
+    at = @At(value = "NEW", target = "net/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket"),
+    remap = false, require = 0)
     private static ClientboundSetActionBarTextPacket onCastErrorTargetMessage(Component component) {
         if (TeamUtils.LAST_BLOCK_WAS_ALLY.get()) {
             TeamUtils.LAST_BLOCK_WAS_ALLY.set(false); // Reset
-            return new ClientboundSetActionBarTextPacket(Component.empty());
+            return new ClientboundSetActionBarTextPacket(net.minecraft.network.chat.Component.translatable("magic_team.message.blocked").withStyle(net.minecraft.ChatFormatting.RED));
         }
         return new ClientboundSetActionBarTextPacket(component != null ? component : Component.empty());
+    }
+
+    /**
+     * Versão 3.15.4+ (Chamada de método de mensagem)
+     * Tentamos capturar chamadas de sendSystemMessage ou similares.
+     */
+    @SuppressWarnings("all")
+    @Redirect(method = {
+        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Lnet/minecraft/world/entity/LivingEntity;",
+        "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z"
+    },
+    at = @At(value = "INVOKE", 
+             target = "Lnet/minecraft/world/entity/player/Player;displayClientMessage(Lnet/minecraft/network/chat/Component;Z)V"),
+    remap = false, require = 0)
+    private static void onCastErrorTargetMessage_3154(net.minecraft.world.entity.player.Player player, Component component, boolean actionBar) {
+        if (TeamUtils.LAST_BLOCK_WAS_ALLY.get()) {
+            TeamUtils.LAST_BLOCK_WAS_ALLY.set(false); // Reset
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("magic_team.message.blocked").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return;
+        }
+        player.displayClientMessage(component, actionBar);
     }
 
     /**

@@ -19,11 +19,9 @@ public class DamageSourcesMixin {
      */
     @Inject(method = "isFriendlyFireBetween", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onIsFriendlyFireBetween(Entity attacker, Entity target, CallbackInfoReturnable<Boolean> cir) {
-        if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableDamageBlock.get()) return;
-
         if (attacker == null || target == null) return;
 
-        // Resolução manual de Summoners (replicando a lógica do ISS no HEAD)
+        // Resolução manual de Summoners
         Entity resolvedAttacker = attacker;
         if (attacker instanceof IMagicSummon summon) {
             Entity owner = summon.getSummoner();
@@ -37,8 +35,10 @@ public class DamageSourcesMixin {
         }
 
         if (TeamUtils.areAllies(resolvedAttacker, resolvedTarget)) {
-            // Se forem aliados de equipe, forçamos Friendly Fire = TRUE (bloqueia o dano/efeito).
-            cir.setReturnValue(true);
+            boolean blockEnabled = com.gabri.magicteam.MagicTeamConfig.SERVER.enableDamageBlock.get();
+            // Se o bloqueio está ATIVO, FriendlyFire = TRUE (cancela o dano)
+            // Se o bloqueio está DESATIVADO, FriendlyFire = FALSE (força o dano a passar)
+            cir.setReturnValue(blockEnabled);
         }
     }
 }

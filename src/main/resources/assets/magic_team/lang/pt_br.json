@@ -20,5 +20,7 @@
   "magic_team.command.filter.harmful": "Nocivos",
   "magic_team.command.filter.view.header": "--- Filtros %s ---",
   "magic_team.command.filter.view.empty": "A lista de filtros %s está vazia.",
-  "magic_team.command.filter.view.item": "- %s"
+  "magic_team.command.filter.view.item": "- %s",
+  "magic_team.command.reload.success": "Configuração recarregada com sucesso!",
+  "magic_team.command.list.header": "=== Filtros de Magia Magic-Team ==="
 }

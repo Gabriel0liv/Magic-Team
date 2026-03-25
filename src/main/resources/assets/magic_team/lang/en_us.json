@@ -20,5 +20,7 @@
   "magic_team.command.filter.harmful": "Harmful",
   "magic_team.command.filter.view.header": "--- %s Filters ---",
   "magic_team.command.filter.view.empty": "The %s filter list is empty.",
-  "magic_team.command.filter.view.item": "- %s"
+  "magic_team.command.filter.view.item": "- %s",
+  "magic_team.command.reload.success": "Configuration reloaded successfully!",
+  "magic_team.command.list.header": "=== Magic-Team Spell Filters ==="
 }

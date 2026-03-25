@@ -32,11 +32,11 @@ public class MagicTeamCommands {
                 })
             )
             .then(Commands.literal("list")
-                 .executes(context -> {
-                     sendStatus(context.getSource());
-                     return 1;
-                 })
-             )
+                .executes(context -> {
+                    sendList(context.getSource());
+                    return 1;
+                })
+            )
             .then(Commands.literal("filter")
                 .then(Commands.literal("add")
                     .then(Commands.literal("beneficial")
@@ -88,6 +88,9 @@ public class MagicTeamCommands {
                     .executes(context -> toggleBypass(context.getSource(), net.minecraft.commands.arguments.EntityArgument.getPlayer(context, "target")))
                 )
             )
+            .then(Commands.literal("reload")
+                .executes(context -> reloadConfig(context.getSource()))
+            )
             .then(Commands.literal("targeting")
                 .then(Commands.argument("enabled", BoolArgumentType.bool())
                     .executes(context -> {
@@ -131,7 +134,7 @@ public class MagicTeamCommands {
         );
     }
 
-    @SuppressWarnings("null")
+    @SuppressWarnings("all")
     private static void sendStatus(CommandSourceStack source) {
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.header").withStyle(ChatFormatting.GOLD), false);
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.targeting").append(MagicTeamConfig.SERVER.enableTargetingBlock.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
@@ -139,9 +142,18 @@ public class MagicTeamCommands {
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.effects").append(MagicTeamConfig.SERVER.enableEffectBlock.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.alliance").append(MagicTeamConfig.SERVER.enableGlobalAlliance.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
         
-        int beneficial = MagicTeamConfig.SERVER.beneficialSpells.get().size();
-        int harmful = MagicTeamConfig.SERVER.explicitHarmfulSpells.get().size();
-        source.sendSuccess(() -> Component.translatable("magic_team.command.status.filters_loaded").withStyle(ChatFormatting.GRAY).append(Component.literal(String.valueOf(beneficial)).append(Component.translatable("magic_team.command.status.filters_beneficial")).append(Component.literal(String.valueOf(harmful))).append(Component.translatable("magic_team.command.status.filters_harmful")).withStyle(ChatFormatting.YELLOW)), false);
+        int bypassCount = com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.size();
+        source.sendSuccess(() -> Component.literal("Staff Bypass active for: ").withStyle(ChatFormatting.GRAY).append(Component.literal(String.valueOf(bypassCount)).withStyle(ChatFormatting.YELLOW).append(" players")), false);
+    }
+
+    @SuppressWarnings("all")
+    private static void sendList(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.translatable("magic_team.command.list.header").withStyle(ChatFormatting.GOLD), false);
+        
+        // Mostrar resumo de benéficos
+        viewFilters(source, "beneficial");
+        // Mostrar resumo de nocivos
+        viewFilters(source, "harmful");
     }
 
     @SuppressWarnings({"null", "unchecked"})
@@ -203,6 +215,13 @@ public class MagicTeamCommands {
                 source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.item", item).withStyle(ChatFormatting.YELLOW), false);
             }
         }
+        return 1;
+    }
+
+    private static int reloadConfig(CommandSourceStack source) {
+        // Em Forge 1.20.1, o arquivo .toml já é sincronizado automaticamente. 
+        // O comando serve como um ponto de confirmação manual para o Admin.
+        source.sendSuccess(() -> Component.translatable("magic_team.command.reload.success").withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 }

@@ -27,6 +27,11 @@ public class TeamUtils {
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) return false;
+
+        // Se a aliança global estiver desligada, ninguém é considerado aliado (permite dano/mira)
+        if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableGlobalAlliance.get()) {
+            return false;
+        }
         
         if (a instanceof ServerPlayer playerA && BYPASSED_PLAYERS.contains(playerA.getUUID())) {
             return false;

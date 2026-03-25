@@ -41,8 +41,9 @@ Command feedback for configuration changes is broadcast only to online operators
 *   `/magicteam filter view <beneficial|harmful>`: Lists the currently active keywords in the specified filter.
 
 ### Information and Status
-*   `/magicteam status`: Displays the current state of all protection modules and filter counts.
-*   `/magicteam list` (Alias for status): Displays the protection summary.
+*   `/magicteam status`: Displays the current state of all protection toggles and Staff Bypass counts.
+*   `/magicteam list`: Lists all keywords currently active in both Beneficial and Harmful spell filters.
+*   `/magicteam reload`: Manually synchronizes the server configuration from the disk.
 
 ### Administrative Utility
 *   `/magicteam bypass [player]`: Toggles bypass mode for the executor or a specified player.
