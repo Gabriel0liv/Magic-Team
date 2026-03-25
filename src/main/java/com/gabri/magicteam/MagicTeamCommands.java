@@ -203,7 +203,7 @@ public class MagicTeamCommands {
     }
 
     private static int viewFilters(CommandSourceStack source, String listType) {
-        var configList = listType.equals("beneficial") ? MagicTeamConfig.SERVER.beneficialSpells.get() : MagicTeamConfig.SERVER.explicitHarmfulSpells.get();
+        java.util.List<? extends String> configList = listType.equals("beneficial") ? MagicTeamConfig.SERVER.beneficialSpells.get() : MagicTeamConfig.SERVER.explicitHarmfulSpells.get();
         Component filterName = Component.translatable(listType.equals("beneficial") ? "magic_team.command.filter.beneficial" : "magic_team.command.filter.harmful");
         
         source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.header", filterName).withStyle(ChatFormatting.GOLD), false);
