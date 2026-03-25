@@ -23,24 +23,52 @@ public class TeamUtils {
     private static final long MESSAGE_COOLDOWN_MS = 1000;
 
     /**
-     * Checks if two entities are on the same Vanilla team.
+     * Checks if two entities are on the same Vanilla team, including owner resolution for summons.
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) return false;
+
+        // Recursively resolve owners (Summons -> Owners)
+        Entity rootA = getRootOwner(a);
+        Entity rootB = getRootOwner(b);
+
+        if (rootA == (Object) rootB) return true; // Mesma entidade ou dono
 
         // Se a aliança global estiver desligada, ninguém é considerado aliado (permite dano/mira)
         if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableGlobalAlliance.get()) {
             return false;
         }
         
-        if (a instanceof ServerPlayer playerA && BYPASSED_PLAYERS.contains(playerA.getUUID())) {
+        // Se o atacante (ou seu dono) estiver em Bypass, as alianças são ignoradas
+        if (rootA instanceof ServerPlayer playerA && BYPASSED_PLAYERS.contains(playerA.getUUID())) {
             return false;
         }
 
-        Team teamA = a.getTeam();
-        Team teamB = b.getTeam();
-        boolean allies = teamA != null && teamA.isAlliedTo(teamB);
-        return allies;
+        Team teamA = rootA.getTeam();
+        Team teamB = rootB.getTeam();
+        return teamA != null && teamA.isAlliedTo(teamB);
+    }
+
+    /**
+     * Resolves the true owner of an entity (Projectiles, Summons, etc).
+     */
+    public static Entity getRootOwner(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.projectile.Projectile projectile) {
+            Entity owner = projectile.getOwner();
+            if (owner != null && owner != entity) return getRootOwner(owner);
+        }
+        
+        if (entity instanceof io.redspace.ironsspellbooks.entity.mobs.IMagicSummon summon) {
+            Entity owner = summon.getSummoner();
+            if (owner != null && owner != entity) return getRootOwner(owner);
+        }
+
+        if (entity instanceof net.minecraft.world.entity.AreaEffectCloud cloud) {
+            Entity owner = cloud.getOwner();
+            if (owner != null && owner != entity) return getRootOwner(owner);
+        }
+
+        return entity;
     }
 
     /**

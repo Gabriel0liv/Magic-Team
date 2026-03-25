@@ -1,7 +1,6 @@
 package com.gabri.magicteam.mixin;
 
 import io.redspace.ironsspellbooks.damage.DamageSources;
-import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
 import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,24 +20,17 @@ public class DamageSourcesMixin {
     private static void onIsFriendlyFireBetween(Entity attacker, Entity target, CallbackInfoReturnable<Boolean> cir) {
         if (attacker == null || target == null) return;
 
-        // Resolução manual de Summoners
-        Entity resolvedAttacker = attacker;
-        if (attacker instanceof IMagicSummon summon) {
-            Entity owner = summon.getSummoner();
-            if (owner != null) resolvedAttacker = owner;
-        }
+        Entity rootAttacker = TeamUtils.getRootOwner(attacker);
+        Entity rootTarget = TeamUtils.getRootOwner(target);
 
-        Entity resolvedTarget = target;
-        if (target instanceof IMagicSummon summon) {
-            Entity owner = summon.getSummoner();
-            if (owner != null) resolvedTarget = owner;
-        }
-
-        if (TeamUtils.areAllies(resolvedAttacker, resolvedTarget)) {
+        if (TeamUtils.areAllies(rootAttacker, rootTarget)) {
             boolean blockEnabled = com.gabri.magicteam.MagicTeamConfig.SERVER.enableDamageBlock.get();
-            // Se o bloqueio está ATIVO, FriendlyFire = TRUE (cancela o dano)
-            // Se o bloqueio está DESATIVADO, FriendlyFire = FALSE (força o dano a passar)
+            // Friendly Fire is TRUE if blocking is ENABLED.
+            // Friendly Fire is FALSE if blocking is DISABLED (allows damage).
             cir.setReturnValue(blockEnabled);
+        } else {
+            // Se NÃO são aliados (Bypass ou times diferentes), NÃO é friendly fire.
+            cir.setReturnValue(false);
         }
     }
 }
