@@ -17,5 +17,8 @@
   "magic_team.command.filter.remove.success": "Removido '%s' dos filtros %s!",
   "magic_team.command.filter.remove.missing": "'%s' não estava nos filtros %s!",
   "magic_team.command.filter.beneficial": "Benéficos",
-  "magic_team.command.filter.harmful": "Nocivos"
+  "magic_team.command.filter.harmful": "Nocivos",
+  "magic_team.command.filter.view.header": "--- Filtros %s ---",
+  "magic_team.command.filter.view.empty": "A lista de filtros %s está vazia.",
+  "magic_team.command.filter.view.item": "- %s"
 }

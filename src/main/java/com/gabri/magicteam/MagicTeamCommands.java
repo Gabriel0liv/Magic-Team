@@ -3,12 +3,24 @@ package com.gabri.magicteam;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
+import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
 
 public class MagicTeamCommands {
+    @SuppressWarnings("null")
+    private static final SuggestionProvider<CommandSourceStack> SPELL_SUGGESTIONS = (context, builder) -> 
+        SharedSuggestionProvider.suggest(
+            SpellRegistry.REGISTRY.get().getValues().stream()
+                .map(AbstractSpell::getSpellId),
+            builder
+        );
+
     @SuppressWarnings("null")
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("magicteam")
@@ -29,11 +41,13 @@ public class MagicTeamCommands {
                 .then(Commands.literal("add")
                     .then(Commands.literal("beneficial")
                         .then(Commands.argument("spell", StringArgumentType.string())
+                            .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> addFilter(context.getSource(), "beneficial", StringArgumentType.getString(context, "spell")))
                         )
                     )
                     .then(Commands.literal("harmful")
                         .then(Commands.argument("spell", StringArgumentType.string())
+                            .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> addFilter(context.getSource(), "harmful", StringArgumentType.getString(context, "spell")))
                         )
                     )
@@ -41,13 +55,23 @@ public class MagicTeamCommands {
                 .then(Commands.literal("remove")
                     .then(Commands.literal("beneficial")
                         .then(Commands.argument("spell", StringArgumentType.string())
+                            .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> removeFilter(context.getSource(), "beneficial", StringArgumentType.getString(context, "spell")))
                         )
                     )
                     .then(Commands.literal("harmful")
                         .then(Commands.argument("spell", StringArgumentType.string())
+                            .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> removeFilter(context.getSource(), "harmful", StringArgumentType.getString(context, "spell")))
                         )
+                    )
+                )
+                .then(Commands.literal("view")
+                    .then(Commands.literal("beneficial")
+                        .executes(context -> viewFilters(context.getSource(), "beneficial"))
+                    )
+                    .then(Commands.literal("harmful")
+                        .executes(context -> viewFilters(context.getSource(), "harmful"))
                     )
                 )
             )
@@ -162,6 +186,22 @@ public class MagicTeamCommands {
         } else {
             com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.add(uuid);
             source.sendSuccess(() -> Component.translatable("magic_team.bypass.enabled").append(" -> ").append(target.getDisplayName()).withStyle(ChatFormatting.GREEN), true);
+        }
+        return 1;
+    }
+
+    private static int viewFilters(CommandSourceStack source, String listType) {
+        var configList = listType.equals("beneficial") ? MagicTeamConfig.SERVER.beneficialSpells.get() : MagicTeamConfig.SERVER.explicitHarmfulSpells.get();
+        Component filterName = Component.translatable(listType.equals("beneficial") ? "magic_team.command.filter.beneficial" : "magic_team.command.filter.harmful");
+        
+        source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.header", filterName).withStyle(ChatFormatting.GOLD), false);
+        
+        if (configList.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.empty", filterName).withStyle(ChatFormatting.GRAY), false);
+        } else {
+            for (String item : configList) {
+                source.sendSuccess(() -> Component.translatable("magic_team.command.filter.view.item", item).withStyle(ChatFormatting.YELLOW), false);
+            }
         }
         return 1;
     }

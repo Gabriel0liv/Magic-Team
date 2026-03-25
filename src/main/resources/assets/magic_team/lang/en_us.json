@@ -17,5 +17,8 @@
   "magic_team.command.filter.remove.success": "Removed '%s' from %s filters!",
   "magic_team.command.filter.remove.missing": "'%s' was not found in %s filters!",
   "magic_team.command.filter.beneficial": "Beneficial",
-  "magic_team.command.filter.harmful": "Harmful"
+  "magic_team.command.filter.harmful": "Harmful",
+  "magic_team.command.filter.view.header": "--- %s Filters ---",
+  "magic_team.command.filter.view.empty": "The %s filter list is empty.",
+  "magic_team.command.filter.view.item": "- %s"
 }
