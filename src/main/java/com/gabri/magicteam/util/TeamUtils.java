@@ -21,6 +21,9 @@ public class TeamUtils {
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
     
+    // Flag to temporarily pretend entities are NOT allies for collision/damage logic
+    public static final ThreadLocal<Boolean> FORCE_ENEMIES_SCOPE = ThreadLocal.withInitial(() -> false);
+    
     public static void loadBypassData() {
         BYPASSED_PLAYERS.clear();
         BYPASSED_PLAYERS.addAll(BypassDataStorage.load());
@@ -32,6 +35,7 @@ public class TeamUtils {
     
     /**
      * Checks if two entities are on the same Vanilla team, including owner resolution for summons.
+     * This is a "ground truth" check of their membership, regardless of global toggles.
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) return false;
@@ -41,20 +45,23 @@ public class TeamUtils {
         Entity rootB = getRootOwner(b);
 
         if (rootA == (Object) rootB) return true; // Mesma entidade ou dono
-
-        // Se a aliança global estiver desligada, ninguém é considerado aliado (permite dano/mira)
-        if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableGlobalAlliance.get()) {
-            return false;
-        }
         
         // Se o atacante (ou seu dono) estiver em Bypass, as alianças são ignoradas
-        if (rootA instanceof ServerPlayer playerA && BYPASSED_PLAYERS.contains(playerA.getUUID())) {
+        if (isBypassed(rootA)) {
             return false;
         }
 
         Team teamA = rootA.getTeam();
         Team teamB = rootB.getTeam();
         return teamA != null && teamA.isAlliedTo(teamB);
+    }
+
+    public static boolean isBypassed(Entity entity) {
+        Entity root = getRootOwner(entity);
+        if (root instanceof ServerPlayer player) {
+            return BYPASSED_PLAYERS.contains(player.getUUID());
+        }
+        return false;
     }
 
     /**
