@@ -27,9 +27,6 @@ public class MagicTeamConfig {
     }
 
     public static class ServerConfig {
-        public final ForgeConfigSpec.BooleanValue enableTargetingBlock;
-        public final ForgeConfigSpec.BooleanValue enableDamageBlock;
-        public final ForgeConfigSpec.BooleanValue enableEffectBlock;
         public final ForgeConfigSpec.BooleanValue enableGlobalAlliance;
 
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> beneficialSpells;
@@ -37,17 +34,8 @@ public class MagicTeamConfig {
 
         public ServerConfig(ForgeConfigSpec.Builder builder) {
             builder.push("protection");
-            enableTargetingBlock = builder
-                    .comment("Ativa o bloqueio de mira (raycast) em aliados para magias nocivas.")
-                    .define("enableTargetingBlock", true);
-            enableDamageBlock = builder
-                    .comment("Ativa o bloqueio de dano direto (friendly fire) entre aliados.")
-                    .define("enableDamageBlock", true);
-            enableEffectBlock = builder
-                    .comment("Ativa o bloqueio de efeitos negativos (debuffs) entre aliados.")
-                    .define("enableEffectBlock", true);
             enableGlobalAlliance = builder
-                    .comment("Força a lógica de 'isAlliedTo' do Minecraft a retornar true para colegas de equipe.")
+                    .comment("Ativa a lógica de proteção global entre aliados. Se desativado, o PvP é livre.")
                     .define("enableGlobalAlliance", true);
             builder.pop();
 

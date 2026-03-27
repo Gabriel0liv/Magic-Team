@@ -1,9 +1,6 @@
 {
   "magic_team.message.blocked": "Invalid target (Ally)",
   "magic_team.command.status.header": "--- Magic Team Status ---",
-  "magic_team.command.status.targeting": "Targeting Block: ",
-  "magic_team.command.status.damage": "Damage Block: ",
-  "magic_team.command.status.effects": "Effect Block: ",
   "magic_team.command.status.alliance": "Global Alliance: ",
   "magic_team.command.status.enabled": "ENABLED",
   "magic_team.command.status.disabled": "DISABLED",

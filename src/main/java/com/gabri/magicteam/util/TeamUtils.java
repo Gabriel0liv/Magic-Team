@@ -21,9 +21,6 @@ public class TeamUtils {
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
     
-    // Flag to temporarily pretend entities are NOT allies for collision/damage logic
-    public static final ThreadLocal<Boolean> FORCE_ENEMIES_SCOPE = ThreadLocal.withInitial(() -> false);
-    
     public static void loadBypassData() {
         BYPASSED_PLAYERS.clear();
         BYPASSED_PLAYERS.addAll(BypassDataStorage.load());
@@ -34,26 +31,38 @@ public class TeamUtils {
     }
     
     /**
-     * Checks if two entities are on the same Vanilla team, including owner resolution for summons.
-     * This is a "ground truth" check of their membership, regardless of global toggles.
+     * Determina se duas entidades devem ser tratadas como aliadas no momento atual.
+     * Esta é a "autoridade absoluta" do mod, respeitando bypass e configurações de PvP.
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) return false;
 
-        // Recursively resolve owners (Summons -> Owners)
+        // 1. Resolvemos os donos reais (Players por trás de projéteis/summons)
         Entity rootA = getRootOwner(a);
         Entity rootB = getRootOwner(b);
 
-        if (rootA == (Object) rootB) return true; // Mesma entidade ou dono
-        
-        // Se o atacante (ou seu dono) estiver em Bypass, as alianças são ignoradas
-        if (isBypassed(rootA)) {
+        // 2. Se for o próprio ou tiver o mesmo dono, é aliado
+        if (rootA == rootB) return true;
+
+        // 3. Se ALGUM dos lados estiver em BYPASS, tratamos como INIMIGOS (PvP Livre)
+        if (isBypassed(rootA) || isBypassed(rootB)) {
             return false;
         }
 
+        // 4. Se a aliança global estiver DESLIGADA, ninguém é aliado (PvP Global)
+        if (!com.gabri.magicteam.MagicTeamConfig.SERVER.enableGlobalAlliance.get()) {
+            return false;
+        }
+
+        // 5. Se chegamos aqui, respeitamos os times do Minecraft Vanilla
         Team teamA = rootA.getTeam();
         Team teamB = rootB.getTeam();
-        return teamA != null && teamA.isAlliedTo(teamB);
+        if (teamA != null && teamB != null) {
+            return teamA.isAlliedTo(teamB);
+        }
+
+        // Sem time, não são aliados por padrão
+        return false;
     }
 
     public static boolean isBypassed(Entity entity) {
@@ -123,21 +132,19 @@ public class TeamUtils {
         
         // 1. Check explicit harmful blacklist
         boolean isExplicitlyHarmful = com.gabri.magicteam.MagicTeamConfig.SERVER.explicitHarmfulSpells.get().stream()
-                .anyMatch(harmfulStr -> {
-                    String h = harmfulStr.toLowerCase();
-                    return id.equals(h) || id.equals("irons_spellbooks:" + h) || id.contains(":" + h);
-                });
+                .anyMatch(h -> id.contains(h.toLowerCase()));
         
-        if (isExplicitlyHarmful) return true;
+        if (isExplicitlyHarmful) {
+            return true;
+        }
         
         // 2. Check beneficial whitelist
         boolean isBeneficial = com.gabri.magicteam.MagicTeamConfig.SERVER.beneficialSpells.get().stream()
-                .anyMatch(beneficialStr -> {
-                    String b = beneficialStr.toLowerCase();
-                    return id.equals(b) || id.equals("irons_spellbooks:" + b) || id.contains(":" + b);
-                });
+                .anyMatch(b -> id.contains(b.toLowerCase()));
 
-        if (isBeneficial) return false;
+        if (isBeneficial) {
+            return false;
+        }
         
         // 3. Fallback: Everything else is considered harmful by default (to be safe)
         return true;

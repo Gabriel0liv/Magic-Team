@@ -1,37 +1,25 @@
 package com.gabri.magicteam.mixin;
 
 import com.gabri.magicteam.util.TeamUtils;
-import com.gabri.magicteam.MagicTeamConfig;
-import net.minecraft.world.effect.MobEffectCategory;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Entity; // Added this import as it's used in the method signature
+import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import javax.annotation.Nullable;
-
-@Mixin(LivingEntity.class)
+@Mixin(net.minecraft.world.entity.LivingEntity.class)
 public abstract class LivingEntityMixin {
 
     @Inject(method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), cancellable = true)
-    private void onAddEffect(MobEffectInstance effectInstance, @Nullable Entity source, CallbackInfoReturnable<Boolean> cir) {
-        if (!MagicTeamConfig.SERVER.enableEffectBlock.get()) return;
-
+    private void onAddEffect(net.minecraft.world.effect.MobEffectInstance effectInstance, Entity source, CallbackInfoReturnable<Boolean> cir) {
         if (source == null) return;
 
-        Entity trueSource = TeamUtils.getRootOwner(source);
-        
-        if (trueSource == null || trueSource == (Object) this) return;
-
-        if (TeamUtils.areAllies(trueSource, (Entity) (Object) this)) {
-            // Block if the effect is NOT beneficial (Harmful or Neutral)
-            if (effectInstance.getEffect().getCategory() != MobEffectCategory.BENEFICIAL) {
-                // Visual Feedback
-                TeamUtils.sendBlockedMessage(trueSource);
-                
+        // Se eles são aliados (respeitando Aliança Global e Bypass)
+        if (TeamUtils.areAllies(source, (Entity) (Object) this)) {
+            // Se o efeito for de uma magia e for nocivo, bloqueamos.
+            // (Assumimos que efeitos negativos de magias são indesejados entre aliados por padrão)
+            if (!effectInstance.getEffect().isBeneficial()) {
+                TeamUtils.sendBlockedMessage(source);
                 cir.setReturnValue(false);
             }
         }

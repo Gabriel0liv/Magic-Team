@@ -40,13 +40,13 @@ public class MagicTeamCommands {
             .then(Commands.literal("filter")
                 .then(Commands.literal("add")
                     .then(Commands.literal("beneficial")
-                        .then(Commands.argument("spell", StringArgumentType.string())
+                        .then(Commands.argument("spell", StringArgumentType.greedyString())
                             .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> addFilter(context.getSource(), "beneficial", StringArgumentType.getString(context, "spell")))
                         )
                     )
                     .then(Commands.literal("harmful")
-                        .then(Commands.argument("spell", StringArgumentType.string())
+                        .then(Commands.argument("spell", StringArgumentType.greedyString())
                             .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> addFilter(context.getSource(), "harmful", StringArgumentType.getString(context, "spell")))
                         )
@@ -54,13 +54,13 @@ public class MagicTeamCommands {
                 )
                 .then(Commands.literal("remove")
                     .then(Commands.literal("beneficial")
-                        .then(Commands.argument("spell", StringArgumentType.string())
+                        .then(Commands.argument("spell", StringArgumentType.greedyString())
                             .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> removeFilter(context.getSource(), "beneficial", StringArgumentType.getString(context, "spell")))
                         )
                     )
                     .then(Commands.literal("harmful")
-                        .then(Commands.argument("spell", StringArgumentType.string())
+                        .then(Commands.argument("spell", StringArgumentType.greedyString())
                             .suggests(SPELL_SUGGESTIONS)
                             .executes(context -> removeFilter(context.getSource(), "harmful", StringArgumentType.getString(context, "spell")))
                         )
@@ -91,35 +91,8 @@ public class MagicTeamCommands {
             .then(Commands.literal("reload")
                 .executes(context -> reloadConfig(context.getSource()))
             )
-            .then(Commands.literal("targeting")
-                .then(Commands.argument("enabled", BoolArgumentType.bool())
-                    .executes(context -> {
-                        boolean enabled = BoolArgumentType.getBool(context, "enabled");
-                        MagicTeamConfig.SERVER.enableTargetingBlock.set(enabled);
-                        context.getSource().sendSuccess(() -> Component.translatable("magic_team.command.status.targeting").append(enabled ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), true);
-                        return 1;
-                    })
-                )
-            )
-            .then(Commands.literal("damage")
-                .then(Commands.argument("enabled", BoolArgumentType.bool())
-                    .executes(context -> {
-                        boolean enabled = BoolArgumentType.getBool(context, "enabled");
-                        MagicTeamConfig.SERVER.enableDamageBlock.set(enabled);
-                        context.getSource().sendSuccess(() -> Component.translatable("magic_team.command.status.damage").append(enabled ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), true);
-                        return 1;
-                    })
-                )
-            )
-            .then(Commands.literal("effects")
-                .then(Commands.argument("enabled", BoolArgumentType.bool())
-                    .executes(context -> {
-                        boolean enabled = BoolArgumentType.getBool(context, "enabled");
-                        MagicTeamConfig.SERVER.enableEffectBlock.set(enabled);
-                        context.getSource().sendSuccess(() -> Component.translatable("magic_team.command.status.effects").append(enabled ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), true);
-                        return 1;
-                    })
-                )
+            .then(Commands.literal("reload")
+                .executes(context -> reloadConfig(context.getSource()))
             )
             .then(Commands.literal("alliance")
                 .then(Commands.argument("enabled", BoolArgumentType.bool())
@@ -137,9 +110,6 @@ public class MagicTeamCommands {
     @SuppressWarnings("all")
     private static void sendStatus(CommandSourceStack source) {
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.header").withStyle(ChatFormatting.GOLD), false);
-        source.sendSuccess(() -> Component.translatable("magic_team.command.status.targeting").append(MagicTeamConfig.SERVER.enableTargetingBlock.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
-        source.sendSuccess(() -> Component.translatable("magic_team.command.status.damage").append(MagicTeamConfig.SERVER.enableDamageBlock.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
-        source.sendSuccess(() -> Component.translatable("magic_team.command.status.effects").append(MagicTeamConfig.SERVER.enableEffectBlock.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
         source.sendSuccess(() -> Component.translatable("magic_team.command.status.alliance").append(MagicTeamConfig.SERVER.enableGlobalAlliance.get() ? Component.translatable("magic_team.command.status.enabled").withStyle(ChatFormatting.GREEN) : Component.translatable("magic_team.command.status.disabled").withStyle(ChatFormatting.RED)), false);
         
         int bypassCount = com.gabri.magicteam.util.TeamUtils.BYPASSED_PLAYERS.size();
