@@ -1,3 +1,15 @@
 {
-  "magic_team.message.blocked": "Alvo inválido (Aliado)"
+  "magic_team.message.blocked": "Alvo inválido (Aliado)",
+  "magic_team.command.status.filters_loaded": "Filtros Carregados: ",
+  "magic_team.command.save.success": "Configuração salva com sucesso!",
+  "magic_team.command.reload.success": "Configuração recarregada com sucesso!",
+  "magic_team.command.filter.beneficial": "benéficas",
+  "magic_team.command.filter.harmful": "nocivas",
+  "magic_team.command.filter.add.success": "Adicionada %s às magias %s.",
+  "magic_team.command.filter.add.exists": "%s já está nas magias %s.",
+  "magic_team.command.filter.remove.success": "Removida %s das magias %s.",
+  "magic_team.command.filter.remove.missing": "%s não está nas magias %s.",
+  "magic_team.command.filter.view.header": "Lista de magias %s",
+  "magic_team.command.filter.view.empty": "Nenhuma magia configurada para %s.",
+  "magic_team.command.filter.view.item": "- %s"
 }

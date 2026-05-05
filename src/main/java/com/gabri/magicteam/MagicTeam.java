@@ -1,8 +1,15 @@
 package com.gabri.magicteam;
 
-import com.gabri.magicteam.events.TeamDamageEventHandler;
+import com.gabri.magicteam.util.MagicTeamConfig;
+import com.gabri.magicteam.MagicTeamCommands;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main entry point for Magic Team mod.
@@ -11,19 +18,13 @@ import net.minecraftforge.fml.common.Mod;
 @Mod("magic_team")
 public class MagicTeam {
     public static final String MODID = "magic_team";
+    private static final Logger LOGGER = LoggerFactory.getLogger(MODID);
 
     public MagicTeam() {
-        // Register Config
-        MagicTeamConfig.register();
-
-        // Register the event handler for team damage protection
-        MinecraftForge.EVENT_BUS.register(new TeamDamageEventHandler());
-        
-        // Register Command
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, MagicTeamConfig.SERVER_SPEC);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(MagicTeamConfig::onConfigEvent);
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        
-        // Load Bypass Persistence
-        com.gabri.magicteam.util.TeamUtils.loadBypassData();
+        LOGGER.info("Magic-Team loaded: fixed team rules enabled.");
     }
 
     private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {

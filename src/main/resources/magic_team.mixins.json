@@ -5,10 +5,17 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "magic_team.refmap.json",
   "mixins": [
-    "UtilsMixin",
-    "LivingEntityMixin",
+    "AbstractMagicProjectileMixin",
+    "AnnihilationSpellMixin",
+    "AbstractSpellMixin",
+    "AoeEntityMixin",
+    "CataclysmFlareBombMixin",
+    "CataclysmWitherHowitzerMixin",
     "EntityMixin",
-    "DamageSourcesMixin"
+    "PoisonCloudMixin",
+    "UtilsMixin",
+    "DamageSourcesMixin",
+    "LivingEntityMixin"
   ],
   "client": [],
   "injectors": {

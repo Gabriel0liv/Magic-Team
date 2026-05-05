@@ -1,6 +1,7 @@
 package com.gabri.magicteam.mixin;
 
 import io.redspace.ironsspellbooks.damage.DamageSources;
+import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,11 +28,11 @@ public class DamageSourcesMixin {
         Entity attacker = damageSource.getEntity();
         if (attacker == null || target == null) return;
 
-        // Se o sistema diz que são aliados, bloqueamos o dano.
-        // Se a Aliança Global estiver OFF, areAllies retornará false e o dano passará.
-        if (TeamUtils.areAllies(attacker, target)) {
-            TeamUtils.sendBlockedMessage(attacker);
-            cir.setReturnValue(false);
+        if (damageSource instanceof SpellDamageSource spellDamageSource) {
+            if (TeamUtils.shouldBlockMagicDamage(attacker, target, spellDamageSource.spell())) {
+                TeamUtils.sendBlockedMessage(attacker);
+                cir.setReturnValue(false);
+            }
         }
     }
 }
