@@ -91,6 +91,10 @@ These commands manage the beneficial and harmful spell lists used for target blo
 
 Addon compatibility can vary. Magic-Team works best when an addon uses standard magic system. Some addons apply damage or debuffs through custom entities, delayed explosions, or non-standard hooks, and those cases may need extra integration or may not be fully covered.
 
+## License
+
+Magic-Team is distributed under a proprietary license. See [LICENSE.txt](/C:/Users/gabri/Desktop/Mods%20Próprios/Magic-Team/Magic-Team/LICENSE.txt) for the full terms.
+
 ## Why This Mod?
 
 This mod is useful when you want team-based combat rules without relying on manual moderation during every fight.
