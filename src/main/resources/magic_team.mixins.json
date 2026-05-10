@@ -12,6 +12,8 @@
     "CataclysmFlareBombMixin",
     "CataclysmWitherHowitzerMixin",
     "EntityMixin",
+    "AreaEffectCloudMixin",
+    "ThrownPotionMixin",
     "PoisonCloudMixin",
     "UtilsMixin",
     "DamageSourcesMixin",

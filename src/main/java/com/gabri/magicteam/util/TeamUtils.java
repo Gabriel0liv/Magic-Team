@@ -9,6 +9,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.projectile.ThrownPotion;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +79,14 @@ public class TeamUtils {
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance, AbstractSpell spell) {
         if (source == null || target == null || effectInstance == null) {
+            return true;
+        }
+
+        if (MagicTeamEffectContext.isVanillaPotionApplication()) {
+            return true;
+        }
+
+        if (isVanillaPotionSource(source)) {
             return true;
         }
 
@@ -165,5 +175,9 @@ public class TeamUtils {
 
         Entity root = BabelTeamSupport.getRootOwner(entity);
         return root != null ? root : entity;
+    }
+
+    private static boolean isVanillaPotionSource(Entity source) {
+        return source instanceof ThrownPotion || source instanceof AreaEffectCloud;
     }
 }

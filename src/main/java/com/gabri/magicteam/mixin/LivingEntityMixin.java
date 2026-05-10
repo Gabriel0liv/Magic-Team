@@ -21,6 +21,10 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onAddEffect(MobEffectInstance effectInstance, CallbackInfoReturnable<Boolean> cir) {
+        if (MagicTeamEffectContext.isVanillaPotionApplication()) {
+            return;
+        }
+
         Entity source = MagicTeamEffectContext.getSource();
         if (source == null || effectInstance == null) {
             return;
@@ -39,6 +43,10 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onAddEffectWithSource(MobEffectInstance effectInstance, Entity source, CallbackInfoReturnable<Boolean> cir) {
+        if (MagicTeamEffectContext.isVanillaPotionApplication()) {
+            return;
+        }
+
         if (source == null || effectInstance == null) {
             return;
         }
