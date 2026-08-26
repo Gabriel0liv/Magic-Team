@@ -64,8 +64,12 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onHurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
+        if (!MagicTeamEffectContext.shouldFilterDamage() || damageSource == null) {
+            return;
+        }
+
         Entity source = MagicTeamEffectContext.getSource();
-        if (source == null || damageSource == null) {
+        if (source == null) {
             return;
         }
 
@@ -80,6 +84,14 @@ public class LivingEntityMixin {
         }
 
         if (attacker == null) {
+            return;
+        }
+
+        // A context is only allowed to classify damage produced by the same resolved owner.
+        // This prevents a stale context from one spell/AOE from reclassifying unrelated damage.
+        Entity contextOwner = TeamUtils.getRootOwner(source);
+        Entity attackerOwner = TeamUtils.getRootOwner(attacker);
+        if (contextOwner != null && attackerOwner != null && contextOwner != attackerOwner) {
             return;
         }
 

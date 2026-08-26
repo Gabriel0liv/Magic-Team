@@ -1,40 +1,77 @@
 package com.gabri.magicteam.util;
 
-import com.gabri.babel.core.util.BabelTeamSupport;
-import com.gabri.magicteam.util.MagicTeamConfig;
+import com.gabri.babel.core.gameplay.entity.BabelEntityRelations;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.scores.Team;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class TeamUtils {
+    private static final BabelEntityRelations ENTITY_RELATIONS = BabelEntityRelations.INSTANCE;
     private static final Map<UUID, Long> LAST_MESSAGE_TIME = new HashMap<>();
     private static final long MESSAGE_COOLDOWN_MS = 1000;
 
     /**
      * Determina se duas entidades devem ser tratadas como aliadas no momento atual.
-     * Esta é a única regra do mod.
+     * Aliança e bloqueio de friendly fire são conceitos separados.
      */
     public static boolean areAllies(Entity a, Entity b) {
-        if (a == null || b == null) return false;
+        if (a == null || b == null) {
+            return false;
+        }
 
-        return BabelTeamSupport.areAllies(resolveComparisonEntity(a), resolveComparisonEntity(b));
+        return ENTITY_RELATIONS.areAllies(a, b);
     }
 
     /**
-     * Resolves the true owner of an entity (Projectiles, Summons, etc).
+     * Resolves the true owner of an entity (projectiles, summons, AOE owners, etc.)
+     * through Babel Core's current entity-relations domain.
      */
     public static Entity getRootOwner(Entity entity) {
-        return resolveComparisonEntity(entity);
+        return ENTITY_RELATIONS.getRootOwner(entity);
+    }
+
+    /**
+     * Decides whether an offensive interaction must be blocked as friendly fire.
+     *
+     * <p>For scoreboard-team allies, Minecraft's {@link Team#isAllowFriendlyFire()}
+     * is authoritative. Babel-only owner/self alliances without a scoreboard-team
+     * relation preserve the historical Magic Team protection.</p>
+     */
+    public static boolean shouldBlockFriendlyFire(Entity attacker, Entity target) {
+        if (attacker == null || target == null) {
+            return false;
+        }
+
+        Entity rootAttacker = resolveComparisonEntity(attacker);
+        Entity rootTarget = resolveComparisonEntity(target);
+        if (rootAttacker == null || rootTarget == null) {
+            return false;
+        }
+
+        boolean allied = ENTITY_RELATIONS.areAllies(rootAttacker, rootTarget);
+        if (!allied) {
+            return false;
+        }
+
+        Team attackerTeam = rootAttacker.getTeam();
+        Team targetTeam = rootTarget.getTeam();
+        boolean hasTeamRelation = attackerTeam != null
+                && targetTeam != null
+                && attackerTeam.isAlliedTo(targetTeam);
+        boolean friendlyFireAllowed = hasTeamRelation && attackerTeam.isAllowFriendlyFire();
+
+        return FriendlyFirePolicy.shouldBlock(allied, hasTeamRelation, friendlyFireAllowed);
     }
 
     /**
@@ -45,7 +82,7 @@ public class TeamUtils {
         if (entity instanceof ServerPlayer player) {
             long now = System.currentTimeMillis();
             long last = LAST_MESSAGE_TIME.getOrDefault(player.getUUID(), 0L);
-            
+
             if (now - last > MESSAGE_COOLDOWN_MS) {
                 player.sendSystemMessage(Component.translatable("magic_team.message.blocked").withStyle(ChatFormatting.RED), true);
                 LAST_MESSAGE_TIME.put(player.getUUID(), now);
@@ -66,11 +103,11 @@ public class TeamUtils {
             return true;
         }
 
-        if (!areAllies(caster, target)) {
+        if (!isHarmful(spell)) {
             return true;
         }
 
-        return !isHarmful(spell);
+        return !shouldBlockFriendlyFire(caster, target);
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance) {
@@ -90,23 +127,23 @@ public class TeamUtils {
             return true;
         }
 
-        boolean allied = areAllies(source, target);
-        return allied ? effectInstance.getEffect().isBeneficial() : !effectInstance.getEffect().isBeneficial();
+        if (effectInstance.getEffect().isBeneficial()) {
+            return areAllies(source, target);
+        }
+
+        return !shouldBlockFriendlyFire(source, target);
     }
 
     /**
-     * Used by damage gates that should block magic damage between allies.
+     * Used by damage gates that should block magic damage only when friendly fire
+     * is actually disabled for the allied scoreboard team.
      */
     public static boolean shouldBlockMagicDamage(Entity attacker, Entity target) {
         return shouldBlockMagicDamage(attacker, target, null);
     }
 
     public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell) {
-        if (attacker == null || target == null) {
-            return false;
-        }
-
-        return BabelTeamSupport.areAllies(resolveComparisonEntity(attacker), resolveComparisonEntity(target));
+        return shouldBlockFriendlyFire(attacker, target);
     }
 
     public static boolean isHarmful(AbstractSpell spell) {
@@ -173,7 +210,7 @@ public class TeamUtils {
             return null;
         }
 
-        Entity root = BabelTeamSupport.getRootOwner(entity);
+        Entity root = ENTITY_RELATIONS.getRootOwner(entity);
         return root != null ? root : entity;
     }
 
