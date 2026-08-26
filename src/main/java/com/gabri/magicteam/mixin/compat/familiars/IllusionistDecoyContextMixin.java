@@ -2,8 +2,10 @@ package com.gabri.magicteam.mixin.compat.familiars;
 
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -17,6 +19,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.alshanex.alshanex_familiars.entity.misc.IllusionistDecoy", remap = false)
 public abstract class IllusionistDecoyContextMixin {
 
+    @Shadow(remap = false)
+    public abstract LivingEntity getOwner();
+
     @Inject(
             method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z",
             at = @At("HEAD"),
@@ -25,7 +30,9 @@ public abstract class IllusionistDecoyContextMixin {
     private void magicTeam$beginDetonationScope(net.minecraft.world.damagesource.DamageSource source,
                                                  float amount,
                                                  CallbackInfoReturnable<Boolean> cir) {
-        MagicTeamEffectContext.push((Entity) (Object) this, MagicTeamEffectContext.InteractionType.HARMFUL);
+        Entity owner = getOwner();
+        MagicTeamEffectContext.push(owner != null ? owner : (Entity) (Object) this,
+                MagicTeamEffectContext.InteractionType.HARMFUL);
     }
 
     @Inject(
