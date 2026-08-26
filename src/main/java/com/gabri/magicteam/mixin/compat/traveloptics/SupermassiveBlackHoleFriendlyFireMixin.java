@@ -37,7 +37,7 @@ public abstract class SupermassiveBlackHoleFriendlyFireMixin {
     private void magicTeam$gatePull(Entity target, Vec3 motion) {
         Entity owner = TeamUtils.getRootOwner((Entity) (Object) this);
         if (owner == null || target == null || !TeamUtils.shouldBlockFriendlyFire(owner, target)) {
-            target.m_20256_(motion);
+            target.setDeltaMovement(motion);
         }
     }
 }
