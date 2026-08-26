@@ -45,8 +45,9 @@ public class TeamUtils {
      * Decides whether an offensive interaction must be blocked as friendly fire.
      *
      * <p>For scoreboard-team allies, Minecraft's {@link Team#isAllowFriendlyFire()}
-     * is authoritative. Babel-only owner/self alliances without a scoreboard-team
-     * relation preserve the historical Magic Team protection.</p>
+     * is authoritative. Babel-only owner/self-root alliances between distinct
+     * entities preserve the historical Magic Team protection. A direct
+     * self-interaction is never classified as friendly fire.</p>
      */
     public static boolean shouldBlockFriendlyFire(Entity attacker, Entity target) {
         if (attacker == null || target == null) {
@@ -71,7 +72,7 @@ public class TeamUtils {
                 && attackerTeam.isAlliedTo(targetTeam);
         boolean friendlyFireAllowed = hasTeamRelation && attackerTeam.isAllowFriendlyFire();
 
-        return FriendlyFirePolicy.shouldBlock(allied, hasTeamRelation, friendlyFireAllowed);
+        return FriendlyFirePolicy.shouldBlock(attacker == target, allied, hasTeamRelation, friendlyFireAllowed);
     }
 
     /**
@@ -137,7 +138,7 @@ public class TeamUtils {
                 : interactionType;
 
         if (effectiveType == MagicTeamEffectContext.InteractionType.BENEFICIAL) {
-            return areAllies(source, target);
+            return source == target || areAllies(source, target);
         }
 
         if (effectiveType == MagicTeamEffectContext.InteractionType.HARMFUL) {
@@ -145,7 +146,7 @@ public class TeamUtils {
         }
 
         if (effectInstance.getEffect().isBeneficial()) {
-            return areAllies(source, target);
+            return source == target || areAllies(source, target);
         }
 
         return !shouldBlockFriendlyFire(source, target);
