@@ -66,6 +66,7 @@
     "compat.traveloptics.SupermassiveBlackHoleFriendlyFireMixin",
     "compat.traveloptics.SyncedAoeEntityFriendlyFireMixin",
     "compat.traveloptics.TectonicCrestFriendlyFireMixin",
+    "compat.traveloptics.VoidSlashContextMixin",
 
     "compat.geomancyplus.SolarStormFriendlyFireMixin",
 
