@@ -37,7 +37,7 @@ public abstract class AquaVortexFriendlyFireMixin {
     )
     private void magicTeam$gatePull(Entity target, Vec3 motion) {
         if (!magicTeam$protectedTarget(target)) {
-            target.m_20256_(motion);
+            target.setDeltaMovement(motion);
         }
     }
 
@@ -48,7 +48,7 @@ public abstract class AquaVortexFriendlyFireMixin {
     )
     private void magicTeam$gateLiftAndThrow(Entity target, Vec3 motion) {
         if (!magicTeam$protectedTarget(target)) {
-            target.m_20256_(motion);
+            target.setDeltaMovement(motion);
         }
     }
 
