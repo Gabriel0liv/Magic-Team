@@ -13,19 +13,23 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * Wraps mob spell virtual dispatch before addon overrides execute. Runtime SRG
- * name m_8024_ is used deliberately because this mixin is remap=false.
+ * Wraps mob spell virtual dispatch before addon overrides execute.
+ *
+ * <p>The enclosing vanilla override is selected with its Mojmap name so Mixin's
+ * refmap can translate it for production. Calls into Iron's own spell API are
+ * explicitly left unremapped because those method names are not Minecraft
+ * mappings.</p>
  */
-@Mixin(value = AbstractSpellCastingMob.class, remap = false)
+@Mixin(AbstractSpellCastingMob.class)
 public abstract class AbstractSpellCastingMobDispatchMixin {
 
     @Redirect(
-            method = "m_8024_()V",
+            method = "customServerAiStep",
             at = @At(
                     value = "INVOKE",
-                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onServerCastTick(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V"
-            ),
-            remap = false
+                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onServerCastTick(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
+                    remap = false
+            )
     )
     private void magicTeam$dispatchMobCastTick(AbstractSpell spell,
                                                 Level level,
@@ -41,12 +45,12 @@ public abstract class AbstractSpellCastingMobDispatchMixin {
     }
 
     @Redirect(
-            method = "m_8024_()V",
+            method = "customServerAiStep",
             at = @At(
                     value = "INVOKE",
-                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/spells/CastSource;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V"
-            ),
-            remap = false
+                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/spells/CastSource;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
+                    remap = false
+            )
     )
     private void magicTeam$dispatchMobCast(AbstractSpell spell,
                                             Level level,
@@ -66,7 +70,8 @@ public abstract class AbstractSpellCastingMobDispatchMixin {
             method = "initiateCastSpell",
             at = @At(
                     value = "INVOKE",
-                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onServerPreCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V"
+                    target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onServerPreCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
+                    remap = false
             ),
             remap = false
     )
