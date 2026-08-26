@@ -9,12 +9,22 @@ final class FriendlyFirePolicy {
     }
 
     static boolean shouldBlock(boolean allied, boolean hasTeamRelation, boolean friendlyFireAllowed) {
+        return shouldBlock(false, allied, hasTeamRelation, friendlyFireAllowed);
+    }
+
+    static boolean shouldBlock(boolean sameEntity, boolean allied, boolean hasTeamRelation, boolean friendlyFireAllowed) {
+        // Friendly fire is a relation between distinct entities. A spell applying
+        // a helper/buff/debuff to its own caster must not be classified as teammate damage.
+        if (sameEntity) {
+            return false;
+        }
+
         if (!allied) {
             return false;
         }
 
-        // Preserve the existing self/root-owner protection when Babel reports an alliance
-        // that is not backed by a scoreboard team (for example an entity and its owner).
+        // Preserve root-owner protection between distinct entities when Babel reports
+        // an alliance without a scoreboard team (for example a projectile and its owner).
         if (!hasTeamRelation) {
             return true;
         }
