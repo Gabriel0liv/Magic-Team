@@ -48,7 +48,7 @@ public abstract class CataclysmVoidVortexFriendlyFireMixin {
     private void magicTeam$gatePersistentPull(Entity target, Vec3 motion) {
         LivingEntity owner = getOwner();
         if (owner == null || target == null || !TeamUtils.shouldBlockFriendlyFire(owner, target)) {
-            target.m_20256_(motion);
+            target.setDeltaMovement(motion);
         }
     }
 }
