@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
     modId="magic_team"
-version="2.3.0"
+    version="${mod_version}"
     displayName="Magic Team"
     authors="SatDPhoe"
     displayTest="IGNORE_SERVER_VERSION"
@@ -30,5 +30,12 @@ version="2.3.0"
     modId="irons_spellbooks"
     mandatory=true
     versionRange="[1.20.1-3.15.3,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.magic_team]]
+    modId="babel_core"
+    mandatory=true
+    versionRange="[${babel_core_version},)"
     ordering="AFTER"
     side="BOTH"
