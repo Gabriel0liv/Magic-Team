@@ -121,13 +121,18 @@ Do not infer hostility from namespace alone.
 
 `AcidRainAoe` applies the harmful `Corroded` effect directly from its tick path, outside the normal `AoeEntity.checkHits()` scope. Therefore the existing AOE context wrapper does not necessarily classify the application as hostile magic.
 
+Its beneficial-effect cleanse is also an offensive utility action. The current implementation protects scoreboard allies with its own `isAlly(owner, target)` predicate, so teammates remain protected from the cleanse even when scoreboard `friendlyFire=true`.
+
 ### Required behavior
 
-Wrap only the harmful application path in a Magic Team context and mark it as a harmful interaction. The existing `LivingEntity` effect gate should then decide whether the effect is allowed.
+Wrap only the harmful application paths in a Magic Team context and mark them as harmful interactions. The common effect/interaction gates should then decide whether each target is allowed.
 
-Do not directly hard-code team logic inside Acid Rain if the common context/effect gate can express it.
+Both Acid Rain hostile behaviors must obey the same policy:
 
-The beneficial-effect cleanse behavior in Acid Rain must be reviewed separately; it is hostile utility and may also need the same harmful-interaction gate if allies with `friendlyFire=false` are currently cleansed.
+- `Corroded` application;
+- removal of beneficial effects from a target.
+
+For same-team targets, both are blocked when `friendlyFire=false` and allowed when `friendlyFire=true`. Do not directly hard-code a separate team policy inside Acid Rain if the common Magic Team gate can express it.
 
 ## GTBC Geomancy Plus SolarStormEffect
 
@@ -220,7 +225,7 @@ The following matrix is the minimum acceptance set.
 | Iron's AoeEntity hostile effect/damage | blocked |
 | Travel Optics hostile SyncedAoeEntity | blocked |
 | Travel Optics Acid Rain Corroded | blocked |
-| Travel Optics Acid Rain hostile cleanse | blocked if it affects allies today |
+| Travel Optics Acid Rain hostile cleanse | blocked |
 | GTBC Solar Storm targeting | ally not selected |
 | Familiars Hiken impact | blocked/skipped |
 | Healing/support buff | allowed |
