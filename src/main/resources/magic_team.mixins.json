@@ -17,7 +17,12 @@
     "PoisonCloudMixin",
     "UtilsMixin",
     "DamageSourcesMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "compat.irons.AoeEntityFriendlyFireMixin",
+    "compat.traveloptics.SyncedAoeEntityFriendlyFireMixin",
+    "compat.traveloptics.AcidRainAoeContextMixin",
+    "compat.geomancyplus.SolarStormFriendlyFireMixin",
+    "compat.familiars.HikenFriendlyFireMixin"
   ],
   "client": [],
   "injectors": {
