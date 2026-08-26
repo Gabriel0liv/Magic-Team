@@ -1,13 +1,13 @@
 package com.gabri.magicteam;
 
 import com.gabri.magicteam.util.MagicTeamConfig;
-import com.gabri.magicteam.MagicTeamCommands;
+import com.gabri.magicteam.util.MagicTeamEffectContext;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +24,26 @@ public class MagicTeam {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, MagicTeamConfig.SERVER_SPEC);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(MagicTeamConfig::onConfigEvent);
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.addListener(this::onServerTick);
         LOGGER.info("Magic-Team loaded: fixed team rules enabled.");
     }
 
     private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
         MagicTeamCommands.register(event.getDispatcher());
+    }
+
+    private void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        int depth = MagicTeamEffectContext.getDepth();
+        if (depth <= 0) {
+            return;
+        }
+
+        String context = MagicTeamEffectContext.describeCurrentContext();
+        LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
+        MagicTeamEffectContext.clear();
     }
 }
