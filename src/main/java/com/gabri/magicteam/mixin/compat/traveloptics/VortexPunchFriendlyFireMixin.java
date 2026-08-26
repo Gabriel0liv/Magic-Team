@@ -30,7 +30,7 @@ public abstract class VortexPunchFriendlyFireMixin {
                                               CastSource castSource,
                                               MagicData magicData) {
         if (caster == null || target == null || !TeamUtils.shouldBlockFriendlyFire(caster, target)) {
-            target.m_20256_(motion);
+            target.setDeltaMovement(motion);
         }
     }
 }
