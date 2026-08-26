@@ -8,6 +8,7 @@
     "AbstractMagicProjectileMixin",
     "AnnihilationSpellMixin",
     "AbstractSpellMixin",
+    "AbstractSpellCastingMobDispatchMixin",
     "AoeEntityMixin",
     "CataclysmFlareBombMixin",
     "CataclysmWitherHowitzerMixin",
@@ -18,6 +19,7 @@
     "UtilsMixin",
     "DamageSourcesMixin",
     "LivingEntityMixin",
+    "MagicManagerCastDispatchMixin",
 
     "compat.irons.AoeEntityFriendlyFireMixin",
 
@@ -27,6 +29,7 @@
     "compat.traveloptics.AquaMissilesFriendlyFireMixin",
     "compat.traveloptics.AquaVortexFriendlyFireMixin",
     "compat.traveloptics.BlackoutAntiMagicFieldContextMixin",
+    "compat.traveloptics.CataclysmVoidVortexFriendlyFireMixin",
     "compat.traveloptics.ChargedSandsLevelOneFriendlyFireMixin",
     "compat.traveloptics.ChargedSandsLevelTwoFriendlyFireMixin",
     "compat.traveloptics.CoralBoltFriendlyFireMixin",
@@ -68,6 +71,7 @@
     "compat.traveloptics.SyncedAoeEntityFriendlyFireMixin",
     "compat.traveloptics.TectonicCrestFriendlyFireMixin",
     "compat.traveloptics.VoidSlashContextMixin",
+    "compat.traveloptics.VortexPunchFriendlyFireMixin",
 
     "compat.geomancyplus.SolarStormFriendlyFireMixin",
 
