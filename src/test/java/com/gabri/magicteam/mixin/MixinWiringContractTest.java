@@ -24,7 +24,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.BanishFriendlyFireMixin",
             "compat.traveloptics.ReversalFriendlyFireMixin",
             "compat.traveloptics.CrimsonDescendFriendlyFireMixin",
-            "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin"
+            "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin",
+            "compat.traveloptics.CursedWraithbladeFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
