@@ -30,6 +30,8 @@
     "compat.traveloptics.AquaVortexFriendlyFireMixin",
     "compat.traveloptics.BanishFriendlyFireMixin",
     "compat.traveloptics.BlackoutAntiMagicFieldContextMixin",
+    "compat.traveloptics.CataclysmAmethystClusterFriendlyFireMixin",
+    "compat.traveloptics.CataclysmFlameJetFriendlyFireMixin",
     "compat.traveloptics.CataclysmVoidVortexFriendlyFireMixin",
     "compat.traveloptics.ChargedSandsLevelOneFriendlyFireMixin",
     "compat.traveloptics.ChargedSandsLevelTwoFriendlyFireMixin",
