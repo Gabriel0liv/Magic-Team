@@ -111,10 +111,15 @@ public class TeamUtils {
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance) {
-        return shouldAllowEffect(source, target, effectInstance, null);
+        return shouldAllowEffect(source, target, effectInstance, null, MagicTeamEffectContext.InteractionType.GENERIC);
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance, AbstractSpell spell) {
+        return shouldAllowEffect(source, target, effectInstance, spell, MagicTeamEffectContext.InteractionType.GENERIC);
+    }
+
+    public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance,
+                                            AbstractSpell spell, MagicTeamEffectContext.InteractionType interactionType) {
         if (source == null || target == null || effectInstance == null) {
             return true;
         }
@@ -125,6 +130,18 @@ public class TeamUtils {
 
         if (isVanillaPotionSource(source)) {
             return true;
+        }
+
+        MagicTeamEffectContext.InteractionType effectiveType = interactionType == null
+                ? MagicTeamEffectContext.InteractionType.GENERIC
+                : interactionType;
+
+        if (effectiveType == MagicTeamEffectContext.InteractionType.BENEFICIAL) {
+            return areAllies(source, target);
+        }
+
+        if (effectiveType == MagicTeamEffectContext.InteractionType.HARMFUL) {
+            return !shouldBlockFriendlyFire(source, target);
         }
 
         if (effectInstance.getEffect().isBeneficial()) {
