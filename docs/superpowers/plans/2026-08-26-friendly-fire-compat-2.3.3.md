@@ -49,7 +49,7 @@ Create:
 - [ ] Run `./gradlew compileTestJava`; expected red is the missing new context API, not a missing Babel jar.
 - [ ] Add `interactionType` to the context record. Existing push overloads delegate with `GENERIC`; vanilla potion remains `Origin.VANILLA_POTION` + `GENERIC`.
 - [ ] Make `shouldFilterDamage()` return false for vanilla potion and explicitly `BENEFICIAL` context while preserving current `GENERIC` behavior.
-- [ ] Add a five-argument `TeamUtils.shouldAllowEffect(..., InteractionType)` overload. `HARMFUL` must return `!shouldBlockFriendlyFire(source,target)` regardless of effect category; generic behavior remains category-based.
+- [ ] Add a five-argument `TeamUtils.shouldAllowEffect(..., InteractionType)` overload with this exact policy: `HARMFUL -> !shouldBlockFriendlyFire(source,target)`; `BENEFICIAL -> areAllies(source,target)`; `GENERIC -> preserve the existing effect-category behavior`.
 - [ ] Pass `MagicTeamEffectContext.getInteractionType()` from both `LivingEntityMixin#addEffect` injections.
 - [ ] Include `interaction=` in context diagnostics.
 - [ ] Run `./gradlew build` and commit `refactor: classify magic interaction intent`.
