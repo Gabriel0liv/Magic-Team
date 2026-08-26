@@ -32,10 +32,10 @@ public abstract class AquaVortexFriendlyFireMixin {
 
     @Redirect(
             method = "pullEntitiesTowardsCenter()V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V"),
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V"),
             remap = false
     )
-    private void magicTeam$gatePull(LivingEntity target, Vec3 motion) {
+    private void magicTeam$gatePull(Entity target, Vec3 motion) {
         if (!magicTeam$protectedTarget(target)) {
             target.m_20256_(motion);
         }
@@ -43,16 +43,16 @@ public abstract class AquaVortexFriendlyFireMixin {
 
     @Redirect(
             method = "liftAndThrowEntity(Lnet/minecraft/world/entity/LivingEntity;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V"),
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V"),
             remap = false
     )
-    private void magicTeam$gateLiftAndThrow(LivingEntity target, Vec3 motion) {
+    private void magicTeam$gateLiftAndThrow(Entity target, Vec3 motion) {
         if (!magicTeam$protectedTarget(target)) {
             target.m_20256_(motion);
         }
     }
 
-    private boolean magicTeam$protectedTarget(LivingEntity target) {
+    private boolean magicTeam$protectedTarget(Entity target) {
         Entity self = (Entity) (Object) this;
         Entity owner = TeamUtils.getRootOwner(self);
         return owner != null && target != null && TeamUtils.shouldBlockFriendlyFire(owner, target);
