@@ -35,6 +35,7 @@
     "compat.traveloptics.ChargedSandsLevelTwoFriendlyFireMixin",
     "compat.traveloptics.CoralBoltFriendlyFireMixin",
     "compat.traveloptics.CrimsonDescendFriendlyFireMixin",
+    "compat.traveloptics.CursedWraithbladeFriendlyFireMixin",
     "compat.traveloptics.DimensionalSpikeFriendlyFireMixin",
     "compat.traveloptics.DragonSpiritFriendlyFireMixin",
     "compat.traveloptics.DyingStarFriendlyFireMixin",
