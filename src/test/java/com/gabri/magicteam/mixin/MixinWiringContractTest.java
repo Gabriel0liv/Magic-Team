@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,13 +19,49 @@ public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
     private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
     private static final Path MOB_DISPATCHER = MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java");
+    private static final Pattern RUNTIME_METHOD_CALL = Pattern.compile("\\.m_\\d+_\\s*\\(");
+    private static final List<String> REQUIRED_DELAYED_HOSTILE_ADAPTERS = List.of(
+            "compat.traveloptics.BanishFriendlyFireMixin",
+            "compat.traveloptics.ReversalFriendlyFireMixin",
+            "compat.traveloptics.CrimsonDescendFriendlyFireMixin",
+            "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin"
+    );
 
     private MixinWiringContractTest() {
     }
 
     public static void main(String[] args) throws Exception {
+        confirmedDelayedHostileBypassesHaveAdapters();
+        mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
+    }
+
+    private static void confirmedDelayedHostileBypassesHaveAdapters() throws IOException {
+        String json = Files.readString(MIXIN_CONFIG);
+        Set<String> registered = readMixinRegistrations(json);
+
+        for (String adapter : REQUIRED_DELAYED_HOSTILE_ADAPTERS) {
+            Path source = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
+            check(Files.isRegularFile(source), "confirmed hostile bypass has no adapter source: " + adapter);
+            check(registered.contains(adapter), "confirmed hostile bypass adapter is not registered: " + adapter);
+            check(Files.readString(source).contains("TeamUtils.shouldBlockFriendlyFire"),
+                    "confirmed hostile bypass adapter does not use friendly-fire policy: " + adapter);
+        }
+    }
+
+    private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
+        try (var paths = Files.walk(MIXIN_ROOT)) {
+            for (Path path : paths.filter(candidate -> candidate.toString().endsWith(".java")).toList()) {
+                int lineNumber = 0;
+                for (String line : Files.readAllLines(path)) {
+                    lineNumber++;
+                    String withoutStringLiterals = stripStringLiterals(line);
+                    check(!RUNTIME_METHOD_CALL.matcher(withoutStringLiterals).find(),
+                            "raw runtime Minecraft method call in Java body: " + path + ":" + lineNumber);
+                }
+            }
+        }
     }
 
     private static void allMixinSourcesAreRegisteredAndAllRegistrationsExist() throws IOException {
@@ -86,6 +123,10 @@ public final class MixinWiringContractTest {
         } catch (IOException exception) {
             throw new IllegalStateException("could not read " + path, exception);
         }
+    }
+
+    private static String stripStringLiterals(String line) {
+        return line.replaceAll("\"(?:\\\\.|[^\"\\\\])*\"", "\"\"");
     }
 
     private static int count(String value, String needle) {
