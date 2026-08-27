@@ -1,0 +1,57 @@
+package com.gabri.magicteam.commands;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/** Dependency-free source contract for the public Magic Team command/config surface. */
+public final class CommandConfigContractTest {
+    private static final Path COMMANDS = Path.of("src/main/java/com/gabri/magicteam/MagicTeamCommands.java");
+    private static final Path CONFIG = Path.of("src/main/java/com/gabri/magicteam/util/MagicTeamConfig.java");
+    private static final Path TEAM_UTILS = Path.of("src/main/java/com/gabri/magicteam/util/TeamUtils.java");
+    private static final Path ENTITY_MIXIN = Path.of("src/main/java/com/gabri/magicteam/mixin/EntityMixin.java");
+
+    private CommandConfigContractTest() {
+    }
+
+    public static void main(String[] args) throws Exception {
+        String commands = Files.readString(COMMANDS);
+        String config = Files.readString(CONFIG);
+        String teamUtils = Files.readString(TEAM_UTILS);
+        String entityMixin = Files.readString(ENTITY_MIXIN);
+
+        check(commands.contains("Commands.literal(\"enabled\")"), "missing /magicteam enabled <true|false>");
+        check(commands.contains("BoolArgumentType.bool()"), "enabled/message toggles must use Brigadier boolean arguments");
+        check(commands.contains("Commands.literal(\"spell\")"), "missing spell command root");
+        check(commands.contains("Commands.literal(\"info\")"), "missing spell info command");
+        check(commands.contains("Commands.literal(\"set\")"), "missing spell set command");
+        check(commands.contains("Commands.literal(\"support\")"), "missing support behavior");
+        check(commands.contains("Commands.literal(\"hostile\")"), "missing hostile behavior");
+        check(commands.contains("Commands.literal(\"reset\")"), "missing spell/message reset command");
+        check(commands.contains("Commands.literal(\"overrides\")"), "missing spell overrides command");
+        check(commands.contains("Commands.literal(\"list\")"), "missing spell list command");
+        check(commands.contains("Commands.literal(\"message\")"), "missing message command root");
+        check(commands.contains("Commands.literal(\"debug\")"), "missing debug toggle");
+        check(!commands.contains("Commands.literal(\"filter\")"), "legacy filter command must be removed");
+        check(!commands.contains("Commands.literal(\"save\")"), "manual save command must be removed");
+
+        check(config.contains("BooleanValue enabled"), "server config needs persistent enabled flag");
+        check(config.contains("BooleanValue blockedMessageEnabled"), "server config needs message enabled flag");
+        check(config.contains("ConfigValue<String> blockedMessage"), "server config needs configurable blocked message");
+        check(config.contains("ConfigValue<List<? extends String>> spellOverrides"), "server config needs spell overrides");
+        check(!config.contains("harmfulSpells"), "legacy harmful list must be removed");
+        check(!config.contains("beneficialSpells"), "legacy beneficial list must be removed");
+
+        check(teamUtils.contains("SpellBehavior"), "TeamUtils must resolve support/hostile behavior");
+        check(teamUtils.contains("spellOverrides"), "TeamUtils must consult admin spell overrides");
+        check(teamUtils.contains("blockedMessageEnabled"), "blocked feedback must honor message toggle");
+        check(teamUtils.contains("Component.Serializer.fromJson"), "blocked feedback must accept tellraw-style JSON components");
+        check(teamUtils.contains("if (!isEnabled())"), "central gameplay gates must support disabling Magic Team");
+        check(entityMixin.contains("TeamUtils.isEnabled()"), "Entity alliance mixin must become transparent while disabled");
+    }
+
+    private static void check(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
+        }
+    }
+}
