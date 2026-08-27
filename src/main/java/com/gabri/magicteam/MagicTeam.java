@@ -1,5 +1,6 @@
 package com.gabri.magicteam;
 
+import com.gabri.magicteam.util.FlareVacuumAttribution;
 import com.gabri.magicteam.util.MagicTeamConfig;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import net.minecraftforge.common.MinecraftForge;
@@ -38,12 +39,16 @@ public class MagicTeam {
         }
 
         int depth = MagicTeamEffectContext.getDepth();
-        if (depth <= 0) {
-            return;
+        if (depth > 0) {
+            String context = MagicTeamEffectContext.describeCurrentContext();
+            LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
+            MagicTeamEffectContext.clear();
         }
 
-        String context = MagicTeamEffectContext.describeCurrentContext();
-        LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
-        MagicTeamEffectContext.clear();
+        int flareVacuumDepth = FlareVacuumAttribution.getActiveDepth();
+        if (flareVacuumDepth > 0) {
+            LOGGER.warn("Magic-Team detected a leaked Flare Vacuum attribution context at server tick end; clearing depth={}", flareVacuumDepth);
+            FlareVacuumAttribution.clearActiveContext();
+        }
     }
 }
