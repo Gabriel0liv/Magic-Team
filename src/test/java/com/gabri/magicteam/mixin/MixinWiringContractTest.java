@@ -36,7 +36,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.CataclysmAncientDesertSteleFriendlyFireMixin",
             "compat.traveloptics.ArcaneArtilleryTargetingMixin",
             "compat.traveloptics.ScourgeOfTheSandsTargetingMixin",
-            "compat.traveloptics.ScourgeOfTheSandsLevelThreeTargetingMixin"
+            "compat.traveloptics.ScourgeOfTheSandsLevelThreeTargetingMixin",
+            "compat.traveloptics.GyroSlashFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
