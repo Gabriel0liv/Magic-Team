@@ -44,7 +44,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.GalenaShatterFriendlyFireMixin",
             "compat.traveloptics.GalenaMarkFriendlyFireMixin",
             "compat.traveloptics.TidalGraspFriendlyFireMixin",
-            "compat.traveloptics.FloodSlashFriendlyFireMixin"
+            "compat.traveloptics.FloodSlashFriendlyFireMixin",
+            "compat.traveloptics.EndEruptionFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
@@ -56,6 +57,7 @@ public final class MixinWiringContractTest {
         galenaMarkRechecksFriendlyFireDuringLifetime();
         tidalGraspUsesHostileContextForDelayedEffects();
         floodSlashDoesNotRewardBlockedHits();
+        endEruptionFiltersBeforeDirectDamage();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -177,6 +179,16 @@ public final class MixinWiringContractTest {
                 "Flood Slash must mark protected targets as processed to prevent retry loops");
         check(source.contains("ci.cancel()"),
                 "Flood Slash must stop damage, Wet, mana and Replenish rewards on a blocked hit");
+    }
+
+    private static void endEruptionFiltersBeforeDirectDamage() throws IOException {
+        Path adapter = MIXIN_ROOT.resolve("compat/traveloptics/EndEruptionFriendlyFireMixin.java");
+        check(Files.isRegularFile(adapter), "End Eruption adapter is missing");
+        String source = Files.readString(adapter);
+        check(source.contains("triggerEruption"),
+                "End Eruption must gate the custom delayed eruption path");
+        check(source.contains("getEntitiesOfClass"),
+                "End Eruption must filter protected teammates before direct hurt calls");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
