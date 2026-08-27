@@ -1,6 +1,7 @@
 package com.gabri.magicteam.mixin.compat.traveloptics;
 
 import com.gabri.magicteam.util.FlareVacuumAttribution;
+import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -34,6 +35,19 @@ public abstract class FlareVacuumAttributionMixin {
     )
     private void magicTeam$endAttribution(LivingEntity entity, int amplifier, CallbackInfo ci) {
         FlareVacuumAttribution.end();
+    }
+
+    @Inject(
+            method = "pullEntityTowards(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/LivingEntity;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false
+    )
+    private void magicTeam$gatePull(LivingEntity affectedEntity, LivingEntity target, CallbackInfo ci) {
+        LivingEntity originalCaster = FlareVacuumAttribution.getActiveSource();
+        if (originalCaster != null && target != null && TeamUtils.shouldBlockFriendlyFire(originalCaster, target)) {
+            ci.cancel();
+        }
     }
 
     @ModifyArg(
