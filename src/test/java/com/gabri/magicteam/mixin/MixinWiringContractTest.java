@@ -40,7 +40,9 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.ScourgeOfTheSandsTargetingMixin",
             "compat.traveloptics.ScourgeOfTheSandsLevelThreeTargetingMixin",
             "compat.traveloptics.GyroSlashFriendlyFireMixin",
-            "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin"
+            "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
+            "compat.traveloptics.GalenaShatterFriendlyFireMixin",
+            "compat.traveloptics.GalenaMarkFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
@@ -49,6 +51,7 @@ public final class MixinWiringContractTest {
     public static void main(String[] args) throws Exception {
         confirmedDelayedHostileBypassesHaveAdapters();
         flareVacuumPreservesOriginalCaster();
+        galenaMarkRechecksFriendlyFireDuringLifetime();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -105,6 +108,32 @@ public final class MixinWiringContractTest {
                 "server tick leak guard must inspect Flare Vacuum attribution context");
         check(modEntry.contains("FlareVacuumAttribution.clearActiveContext"),
                 "server tick leak guard must clear stale Flare Vacuum attribution context");
+    }
+
+    private static void galenaMarkRechecksFriendlyFireDuringLifetime() throws IOException {
+        Path shatter = MIXIN_ROOT.resolve("compat/traveloptics/GalenaShatterFriendlyFireMixin.java");
+        Path mark = MIXIN_ROOT.resolve("compat/traveloptics/GalenaMarkFriendlyFireMixin.java");
+
+        check(Files.isRegularFile(shatter), "Galena Shatter application adapter is missing");
+        check(Files.isRegularFile(mark), "Galena Mark lifetime adapter is missing");
+
+        String shatterSource = Files.readString(shatter);
+        check(shatterSource.contains("processStackedTarget"),
+                "Galena Shatter must gate before consuming stacks and applying a mark");
+        check(shatterSource.contains("setReturnValue(false)"),
+                "protected Galena Shatter targets must be rejected before mark application");
+
+        String markSource = Files.readString(mark);
+        check(markSource.contains("@Invoker(\"getTarget\")"),
+                "Galena Mark adapter must resolve its persisted target");
+        check(markSource.contains("@Invoker(\"getCaster\")"),
+                "Galena Mark adapter must resolve its persisted caster");
+        check(markSource.contains("triggerMagneticBlast"),
+                "Galena Mark must recheck friendly fire before the delayed magnetic blast");
+        check(markSource.contains("method = \"m_8119_()V\""),
+                "Galena Mark must recheck friendly fire during damage ticks");
+        check(markSource.contains("require = 2"),
+                "Galena Mark must gate both pull and push movement writes");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
