@@ -77,6 +77,37 @@ jobs:
             cat "$refmap"
           done
 
+          REFMAP=build/tmp/compileJava/magic_team.refmap.json
+          if [ ! -f "$REFMAP" ]; then
+            echo 'Expected magic_team.refmap.json was not generated.' >&2
+            exit 1
+          fi
+
+          python3 - "$REFMAP" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              refmap = json.load(handle)
+
+          mappings = refmap.get('mappings', {})
+          aoe = mappings.get('com/gabri/magicteam/mixin/compat/irons/AoeEntityFriendlyFireMixin', {})
+          expected_method = 'Lio/redspace/ironsspellbooks/entity/spells/AoeEntity;m_5603_(Lnet/minecraft/world/entity/Entity;)Z'
+          expected_call = 'Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z'
+
+          if aoe.get('canHitEntity(Lnet/minecraft/world/entity/Entity;)Z') != expected_method:
+              raise SystemExit('Iron AoeEntity#canHitEntity did not remap to runtime m_5603_')
+          if aoe.get('Lnet/minecraft/world/entity/Entity;isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z') != expected_call:
+              raise SystemExit('Entity#isAlliedTo did not remap to runtime m_7307_')
+
+          mob = mappings.get('com/gabri/magicteam/mixin/AbstractSpellCastingMobDispatchMixin', {})
+          expected_mob_tick = 'Lio/redspace/ironsspellbooks/entity/mobs/abstract_spell_casting_mob/AbstractSpellCastingMob;m_8024_()V'
+          if mob.get('customServerAiStep') != expected_mob_tick:
+              raise SystemExit('AbstractSpellCastingMob#customServerAiStep did not remap to runtime m_8024_')
+
+          print('Critical runtime mappings verified: AoeEntity m_5603_, Entity m_7307_, mob tick m_8024_.')
+          PY
+
       - name: Upload built jar and refmap
         uses: actions/upload-artifact@v4
         with:
