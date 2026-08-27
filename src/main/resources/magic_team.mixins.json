@@ -66,6 +66,8 @@
     "compat.traveloptics.FlareVacuumAttributionMixin",
     "compat.traveloptics.ForlornHarbingerFriendlyFireMixin",
     "compat.traveloptics.ForgeServerEventsFriendlyFireMixin",
+    "compat.traveloptics.GalenaMarkFriendlyFireMixin",
+    "compat.traveloptics.GalenaShatterFriendlyFireMixin",
     "compat.traveloptics.GyroSlashFriendlyFireMixin",
     "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
     "compat.traveloptics.LightningSandstormAoeFriendlyFireMixin",
