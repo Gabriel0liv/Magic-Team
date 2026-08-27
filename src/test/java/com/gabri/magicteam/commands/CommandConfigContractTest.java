@@ -47,6 +47,25 @@ public final class CommandConfigContractTest {
         check(teamUtils.contains("Component.Serializer.fromJson"), "blocked feedback must accept tellraw-style JSON components");
         check(teamUtils.contains("if (!isEnabled())"), "central gameplay gates must support disabling Magic Team");
         check(entityMixin.contains("TeamUtils.isEnabled()"), "Entity alliance mixin must become transparent while disabled");
+
+        String damageGate = isolate(teamUtils,
+                "public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell)",
+                "public static SpellBehavior getDefaultSpellBehavior");
+        check(damageGate.contains("getSpellOverride") || damageGate.contains("getSpellBehavior"),
+                "spell overrides must affect allied spell damage, not only target selection");
+
+        String effectGate = isolate(teamUtils,
+                "public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance,",
+                "public static boolean shouldBlockMagicDamage(Entity attacker, Entity target)");
+        check(effectGate.contains("getSpellOverride"),
+                "explicit admin overrides must take precedence when filtering spell effects");
+    }
+
+    private static String isolate(String source, String startMarker, String endMarker) {
+        int start = source.indexOf(startMarker);
+        int end = source.indexOf(endMarker, start + 1);
+        check(start >= 0 && end > start, "could not isolate source contract section: " + startMarker);
+        return source.substring(start, end);
     }
 
     private static void check(boolean condition, String message) {
