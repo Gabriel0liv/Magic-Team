@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin.compat.traveloptics;
 
+import com.gabri.magicteam.util.FlareVacuumAttribution;
 import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -13,7 +14,9 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * Gyro Slash applies Flare Vacuum immediately after DamageSources.applyDamage.
  * The damage helper already honors friendly fire, but the effect application did
  * not. Gate only the debuff call so the projectile's victim bookkeeping remains
- * unchanged and protected targets are not retried every tick.
+ * unchanged and protected targets are not retried every tick. When the effect is
+ * actually accepted, preserve the projectile's root caster for the delayed Flame
+ * Jets spawned by Flare Vacuum.
  */
 @Pseudo
 @Mixin(targets = "com.gametechbc.traveloptics.entity.projectiles.gyro_slash.GyroSlashProjectile", remap = false)
@@ -33,6 +36,11 @@ public abstract class GyroSlashFriendlyFireMixin {
         if (TeamUtils.shouldBlockFriendlyFire(projectile, target)) {
             return false;
         }
-        return target.addEffect(effectInstance);
+
+        boolean applied = target.addEffect(effectInstance);
+        if (applied) {
+            FlareVacuumAttribution.record(target, projectile, effectInstance.getDuration());
+        }
+        return applied;
     }
 }
