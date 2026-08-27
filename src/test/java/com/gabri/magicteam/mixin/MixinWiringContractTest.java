@@ -42,7 +42,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.GyroSlashFriendlyFireMixin",
             "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
             "compat.traveloptics.GalenaShatterFriendlyFireMixin",
-            "compat.traveloptics.GalenaMarkFriendlyFireMixin"
+            "compat.traveloptics.GalenaMarkFriendlyFireMixin",
+            "compat.traveloptics.TidalGraspFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
@@ -52,6 +53,7 @@ public final class MixinWiringContractTest {
         confirmedDelayedHostileBypassesHaveAdapters();
         flareVacuumPreservesOriginalCaster();
         galenaMarkRechecksFriendlyFireDuringLifetime();
+        tidalGraspUsesHostileContextForDelayedEffects();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -134,6 +136,33 @@ public final class MixinWiringContractTest {
                 "Galena Mark must recheck friendly fire during damage ticks");
         check(markSource.contains("require = 2"),
                 "Galena Mark must gate both pull and push movement writes");
+    }
+
+    private static void tidalGraspUsesHostileContextForDelayedEffects() throws IOException {
+        String adapter = "compat.traveloptics.TidalGraspEffectContextMixin";
+        Path spell = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java");
+        Path effect = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspEffectContextMixin.java");
+        Set<String> registered = readMixinRegistrations(Files.readString(MIXIN_CONFIG));
+
+        check(Files.isRegularFile(spell), "Tidal Grasp spell adapter is missing");
+        check(Files.isRegularFile(effect), "Tidal Grasp delayed-effect context adapter is missing");
+        check(registered.contains(adapter), "Tidal Grasp delayed-effect context adapter is not registered");
+
+        String spellSource = Files.readString(spell);
+        check(spellSource.contains("checkPreCastConditions"),
+                "Tidal Grasp must reject a protected target before the cast starts");
+        check(spellSource.contains("onServerCastTick"),
+                "Tidal Grasp must recheck the target while channeling");
+        check(spellSource.contains("onCast"),
+                "Tidal Grasp must recheck helper/teleport operations at release");
+
+        String effectSource = Files.readString(effect);
+        check(effectSource.contains("InteractionType.HARMFUL"),
+                "Tidal Grasp detonation must classify stun/wet/damage as harmful");
+        check(effectSource.contains("MagicTeamEffectContext.push"),
+                "Tidal Grasp detonation must enter harmful effect context");
+        check(effectSource.contains("MagicTeamEffectContext.pop"),
+                "Tidal Grasp detonation must leave harmful effect context");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
