@@ -15,6 +15,7 @@ public final class FamiliarsCompatibilityContractTest {
         mayhemDirectHitsBlockSideEffectsBeforeDamage();
         dragonEggDoesNotResetProtectedTargetInvulnerability();
         hostileBardSpellsHonorFriendlyFire();
+        harpExplosionTreatsDamageControlAndEffectsAsOneHostileTransaction();
         existingFamiliarsAdaptersRemainRegistered();
     }
 
@@ -83,6 +84,27 @@ public final class FamiliarsCompatibilityContractTest {
         String sonata = Files.readString(MIXIN_ROOT.resolve("compat/familiars/SonataFriendlyFireMixin.java"));
         check(sonata.contains("lambda$shootNotes$0"),
                 "Sonata must patch the GUIDING_BOLT target predicate rather than global alliance semantics");
+    }
+
+    private static void harpExplosionTreatsDamageControlAndEffectsAsOneHostileTransaction() throws Exception {
+        String adapter = "compat.familiars.HarpExplosionFriendlyFireMixin";
+        Path sourcePath = MIXIN_ROOT.resolve("compat/familiars/HarpExplosionFriendlyFireMixin.java");
+        String config = Files.readString(MIXIN_CONFIG);
+
+        check(Files.isRegularFile(sourcePath), "Harp Explosion adapter is missing");
+        check(config.contains("\"" + adapter + "\""), "Harp Explosion adapter is not registered");
+
+        String source = Files.readString(sourcePath);
+        check(source.contains("Lnet/minecraft/world/level/Level;m_6249_"),
+                "Harp Explosion must filter its custom age-26 target list before damage and side effects");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "Harp Explosion target filtering must use friendly-fire policy");
+        check(source.contains("Lnet/minecraft/world/level/Explosion;m_46061_()V"),
+                "Harp Explosion must scope the synchronous explosion damage");
+        check(source.contains("InteractionType.HARMFUL"),
+                "Harp Explosion explosion must execute under harmful interaction context");
+        check(source.contains("try") && source.contains("finally"),
+                "Harp Explosion explosion context must always be popped");
     }
 
     private static void existingFamiliarsAdaptersRemainRegistered() throws Exception {
