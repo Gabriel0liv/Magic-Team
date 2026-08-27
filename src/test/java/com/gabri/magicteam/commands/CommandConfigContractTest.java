@@ -9,6 +9,8 @@ public final class CommandConfigContractTest {
     private static final Path CONFIG = Path.of("src/main/java/com/gabri/magicteam/util/MagicTeamConfig.java");
     private static final Path TEAM_UTILS = Path.of("src/main/java/com/gabri/magicteam/util/TeamUtils.java");
     private static final Path ENTITY_MIXIN = Path.of("src/main/java/com/gabri/magicteam/mixin/EntityMixin.java");
+    private static final Path DAMAGE_SOURCES_MIXIN = Path.of("src/main/java/com/gabri/magicteam/mixin/DamageSourcesMixin.java");
+    private static final Path UTILS_MIXIN = Path.of("src/main/java/com/gabri/magicteam/mixin/UtilsMixin.java");
 
     private CommandConfigContractTest() {
     }
@@ -18,6 +20,8 @@ public final class CommandConfigContractTest {
         String config = Files.readString(CONFIG);
         String teamUtils = Files.readString(TEAM_UTILS);
         String entityMixin = Files.readString(ENTITY_MIXIN);
+        String damageSourcesMixin = Files.readString(DAMAGE_SOURCES_MIXIN);
+        String utilsMixin = Files.readString(UTILS_MIXIN);
 
         check(commands.contains("Commands.literal(\"enabled\")"), "missing /magicteam enabled <true|false>");
         check(commands.contains("BoolArgumentType.bool()"), "enabled/message toggles must use Brigadier boolean arguments");
@@ -47,6 +51,10 @@ public final class CommandConfigContractTest {
         check(teamUtils.contains("Component.Serializer.fromJson"), "blocked feedback must accept tellraw-style JSON components");
         check(teamUtils.contains("if (!isEnabled())"), "central gameplay gates must support disabling Magic Team");
         check(entityMixin.contains("TeamUtils.isEnabled()"), "Entity alliance mixin must become transparent while disabled");
+        check(damageSourcesMixin.contains("if (!TeamUtils.isEnabled())"),
+                "DamageSources mixin must defer to Iron's original result while Magic Team is disabled");
+        check(utilsMixin.contains("if (!TeamUtils.isEnabled())"),
+                "target-helper mixin must defer to Iron's original method while Magic Team is disabled");
 
         String damageGate = isolate(teamUtils,
                 "public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell)",
