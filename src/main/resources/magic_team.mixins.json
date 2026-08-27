@@ -106,7 +106,8 @@
     "compat.familiars.MayhemDirectHitFriendlyFireMixin",
     "compat.familiars.DragonEggFriendlyFireMixin",
     "compat.familiars.LullabyFriendlyFireMixin",
-    "compat.familiars.SonataFriendlyFireMixin"
+    "compat.familiars.SonataFriendlyFireMixin",
+    "compat.familiars.HarpExplosionFriendlyFireMixin"
   ],
   "client": [],
   "injectors": {
