@@ -64,6 +64,7 @@
     "compat.traveloptics.ExtendedWitherHowitzerContextMixin",
     "compat.traveloptics.ForlornHarbingerFriendlyFireMixin",
     "compat.traveloptics.ForgeServerEventsFriendlyFireMixin",
+    "compat.traveloptics.GyroSlashFriendlyFireMixin",
     "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
     "compat.traveloptics.LightningSandstormAoeFriendlyFireMixin",
     "compat.traveloptics.LightningSandstormPierceFriendlyFireMixin",
