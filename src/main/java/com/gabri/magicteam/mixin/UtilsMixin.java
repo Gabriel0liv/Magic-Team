@@ -35,6 +35,10 @@ public class UtilsMixin {
             remap = false
     )
     private static void onPreCastTargetHelper(Level level, LivingEntity caster, MagicData playerMagicData, AbstractSpell spell, int range, float aimAssist, boolean sendFailureMessage, Predicate<LivingEntity> filter, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         if (level == null || caster == null || playerMagicData == null || spell == null) {
             return;
         }
@@ -100,6 +104,10 @@ public class UtilsMixin {
             remap = false
     )
     private static void onShouldHealEntity(Entity healer, Entity target, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         if (!TeamUtils.shouldAllowHealing(healer, target)) {
             cir.setReturnValue(false);
         }
