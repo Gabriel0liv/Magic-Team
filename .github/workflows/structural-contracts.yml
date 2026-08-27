@@ -27,7 +27,8 @@ jobs:
             src/main/java/com/gabri/magicteam/util/ExpiringAttributionIndex.java \
             src/test/java/com/gabri/magicteam/util/FriendlyFirePolicyContractTest.java \
             src/test/java/com/gabri/magicteam/util/FlareVacuumAttributionIndexContractTest.java \
-            src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java
+            src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java \
+            src/test/java/com/gabri/magicteam/mixin/ArchitectureBoundaryContractTest.java
 
       - name: Run friendly-fire policy contract
         run: java -cp build/structural-contracts com.gabri.magicteam.util.FriendlyFirePolicyContractTest
@@ -37,3 +38,6 @@ jobs:
 
       - name: Run mixin wiring contract
         run: java -cp build/structural-contracts com.gabri.magicteam.mixin.MixinWiringContractTest
+
+      - name: Run architecture boundary contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.mixin.ArchitectureBoundaryContractTest
