@@ -58,6 +58,7 @@ public final class MagicTeamConfig {
 
     public static final class Server {
         public final ForgeConfigSpec.BooleanValue enabled;
+        public final ForgeConfigSpec.BooleanValue targetNotificationEnabled;
         public final ForgeConfigSpec.BooleanValue blockedMessageEnabled;
         public final ForgeConfigSpec.ConfigValue<String> blockedMessage;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> spellOverrides;
@@ -68,6 +69,11 @@ public final class MagicTeamConfig {
             enabled = builder
                     .comment("Master switch. When false, Magic Team leaves gameplay interactions untouched.")
                     .define("enabled", true);
+
+            targetNotificationEnabled = builder
+                    .comment("Show Iron's targeted-spell notification to the player being targeted.",
+                            "When false, the target is not told that another entity is aiming/casting a targeted spell at them.")
+                    .define("targetNotificationEnabled", true);
 
             builder.push("message");
             blockedMessageEnabled = builder
@@ -94,6 +100,14 @@ public final class MagicTeamConfig {
 
         public void setEnabled(boolean value) {
             enabled.set(value);
+        }
+
+        public boolean targetNotificationEnabled() {
+            return targetNotificationEnabled.get();
+        }
+
+        public void setTargetNotificationEnabled(boolean value) {
+            targetNotificationEnabled.set(value);
         }
 
         public boolean blockedMessageEnabled() {
