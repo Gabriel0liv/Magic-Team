@@ -45,7 +45,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.GalenaMarkFriendlyFireMixin",
             "compat.traveloptics.TidalGraspFriendlyFireMixin",
             "compat.traveloptics.FloodSlashFriendlyFireMixin",
-            "compat.traveloptics.EndEruptionFriendlyFireMixin"
+            "compat.traveloptics.EndEruptionFriendlyFireMixin",
+            "compat.geomancyplus.TremorStepFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
@@ -58,6 +59,7 @@ public final class MixinWiringContractTest {
         tidalGraspUsesHostileContextForDelayedEffects();
         floodSlashDoesNotRewardBlockedHits();
         endEruptionFiltersBeforeDirectDamage();
+        tremorStepFiltersBeforeDamageSideEffects();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -189,6 +191,16 @@ public final class MixinWiringContractTest {
                 "End Eruption must gate the custom delayed eruption path");
         check(source.contains("getEntitiesOfClass"),
                 "End Eruption must filter protected teammates before direct hurt calls");
+    }
+
+    private static void tremorStepFiltersBeforeDamageSideEffects() throws IOException {
+        Path adapter = MIXIN_ROOT.resolve("compat/geomancyplus/TremorStepFriendlyFireMixin.java");
+        check(Files.isRegularFile(adapter), "Tremor Step adapter is missing");
+        String source = Files.readString(adapter);
+        check(source.contains("triggerTremorShockwave"),
+                "Tremor Step must gate its periodic hostile shockwave");
+        check(source.contains("getEntitiesOfClass"),
+                "Tremor Step must filter protected teammates before damage and invulnerability writes");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
