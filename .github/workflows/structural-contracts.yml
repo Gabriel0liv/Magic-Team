@@ -24,6 +24,7 @@ jobs:
           mkdir -p build/structural-contracts
           javac -d build/structural-contracts \
             src/main/java/com/gabri/magicteam/util/FriendlyFirePolicy.java \
+            src/main/java/com/gabri/magicteam/util/ExpiringAttributionIndex.java \
             src/test/java/com/gabri/magicteam/util/FriendlyFirePolicyContractTest.java \
             src/test/java/com/gabri/magicteam/util/FlareVacuumAttributionIndexContractTest.java \
             src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java
