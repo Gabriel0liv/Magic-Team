@@ -19,6 +19,9 @@ public class DamageSourcesMixin {
      */
     @Inject(method = "isFriendlyFireBetween", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onIsFriendlyFireBetween(Entity attacker, Entity target, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
         cir.setReturnValue(TeamUtils.shouldBlockFriendlyFire(attacker, target));
     }
 
@@ -28,6 +31,10 @@ public class DamageSourcesMixin {
      */
     @Inject(method = "applyDamage", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onApplyDamage(Entity target, float baseAmount, net.minecraft.world.damagesource.DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         Entity attacker = damageSource.getEntity();
         if (attacker == null || target == null) {
             return;
