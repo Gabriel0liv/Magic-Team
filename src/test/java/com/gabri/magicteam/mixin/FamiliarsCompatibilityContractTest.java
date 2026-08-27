@@ -14,6 +14,7 @@ public final class FamiliarsCompatibilityContractTest {
     public static void main(String[] args) throws Exception {
         mayhemDirectHitsBlockSideEffectsBeforeDamage();
         dragonEggDoesNotResetProtectedTargetInvulnerability();
+        hostileBardSpellsHonorFriendlyFire();
         existingFamiliarsAdaptersRemainRegistered();
     }
 
@@ -55,6 +56,33 @@ public final class FamiliarsCompatibilityContractTest {
                 "Dragon Egg adapter must preserve the mapped field write for allowed targets");
         check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
                 "Dragon Egg invulnerability reset must respect friendly-fire policy");
+    }
+
+    private static void hostileBardSpellsHonorFriendlyFire() throws Exception {
+        String config = Files.readString(MIXIN_CONFIG);
+        String[] adapters = {
+                "compat.familiars.LullabyFriendlyFireMixin",
+                "compat.familiars.SonataFriendlyFireMixin"
+        };
+
+        for (String adapter : adapters) {
+            Path sourcePath = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
+            check(Files.isRegularFile(sourcePath), "hostile Bard adapter is missing: " + adapter);
+            check(config.contains("\"" + adapter + "\""), "hostile Bard adapter is not registered: " + adapter);
+            String source = Files.readString(sourcePath);
+            check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                    "hostile Bard targeting must use friendly-fire policy: " + adapter);
+            check(source.contains("m_7307_"),
+                    "hostile Bard targeting must replace the runtime allied prefilter: " + adapter);
+        }
+
+        String lullaby = Files.readString(MIXIN_ROOT.resolve("compat/familiars/LullabyFriendlyFireMixin.java"));
+        check(lullaby.contains("lambda$applySleepy$0"),
+                "Lullaby must patch the SLEEPY target predicate rather than global alliance semantics");
+
+        String sonata = Files.readString(MIXIN_ROOT.resolve("compat/familiars/SonataFriendlyFireMixin.java"));
+        check(sonata.contains("lambda$shootNotes$0"),
+                "Sonata must patch the GUIDING_BOLT target predicate rather than global alliance semantics");
     }
 
     private static void existingFamiliarsAdaptersRemainRegistered() throws Exception {
