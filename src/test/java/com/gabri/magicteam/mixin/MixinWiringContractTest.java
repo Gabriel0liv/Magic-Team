@@ -29,7 +29,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
             "compat.traveloptics.CataclysmFlameJetFriendlyFireMixin",
             "compat.traveloptics.CataclysmAmethystClusterFriendlyFireMixin",
-            "compat.traveloptics.CataclysmVoidRuneFriendlyFireMixin"
+            "compat.traveloptics.CataclysmVoidRuneFriendlyFireMixin",
+            "compat.traveloptics.CataclysmAxeBladeFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
