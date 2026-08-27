@@ -43,7 +43,8 @@ public final class MixinWiringContractTest {
             "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
             "compat.traveloptics.GalenaShatterFriendlyFireMixin",
             "compat.traveloptics.GalenaMarkFriendlyFireMixin",
-            "compat.traveloptics.TidalGraspFriendlyFireMixin"
+            "compat.traveloptics.TidalGraspFriendlyFireMixin",
+            "compat.traveloptics.FloodSlashFriendlyFireMixin"
     );
 
     private MixinWiringContractTest() {
@@ -54,6 +55,7 @@ public final class MixinWiringContractTest {
         flareVacuumPreservesOriginalCaster();
         galenaMarkRechecksFriendlyFireDuringLifetime();
         tidalGraspUsesHostileContextForDelayedEffects();
+        floodSlashDoesNotRewardBlockedHits();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -163,6 +165,18 @@ public final class MixinWiringContractTest {
                 "Tidal Grasp detonation must enter harmful effect context");
         check(effectSource.contains("MagicTeamEffectContext.pop"),
                 "Tidal Grasp detonation must leave harmful effect context");
+    }
+
+    private static void floodSlashDoesNotRewardBlockedHits() throws IOException {
+        Path adapter = MIXIN_ROOT.resolve("compat/traveloptics/FloodSlashFriendlyFireMixin.java");
+        check(Files.isRegularFile(adapter), "Flood Slash adapter is missing");
+        String source = Files.readString(adapter);
+        check(source.contains("@Shadow") && source.contains("victims"),
+                "Flood Slash must preserve victim bookkeeping for blocked targets");
+        check(source.contains("victims.add"),
+                "Flood Slash must mark protected targets as processed to prevent retry loops");
+        check(source.contains("ci.cancel()"),
+                "Flood Slash must stop damage, Wet, mana and Replenish rewards on a blocked hit");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
