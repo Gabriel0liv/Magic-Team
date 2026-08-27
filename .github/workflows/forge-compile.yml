@@ -62,8 +62,11 @@ jobs:
       - name: Clean Forge build
         run: ./gradlew clean build --stacktrace
 
-      - name: Run Forge GameTest server
-        run: ./gradlew runGameTestServer --stacktrace
+      # Do not launch Forge/GameTest in this compile-only workflow. Magic Team declares
+      # Babel Core as a mandatory runtime mod, while this job intentionally injects only
+      # a Java API stub so the private sibling repository is not required to compile.
+      # A server launch here would therefore test an invalid runtime. Real Forge/Arclight
+      # integration is validated with the actual Babel Core jar and the gameplay matrix.
 
       - name: Verify generated refmap
         shell: bash
