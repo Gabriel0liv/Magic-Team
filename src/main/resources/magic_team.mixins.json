@@ -102,7 +102,9 @@
     "compat.geomancyplus.TremorStepFriendlyFireMixin",
 
     "compat.familiars.HikenFriendlyFireMixin",
-    "compat.familiars.IllusionistDecoyContextMixin"
+    "compat.familiars.IllusionistDecoyContextMixin",
+    "compat.familiars.MayhemDirectHitFriendlyFireMixin",
+    "compat.familiars.DragonEggFriendlyFireMixin"
   ],
   "client": [],
   "injectors": {
