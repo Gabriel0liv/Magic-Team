@@ -25,10 +25,14 @@ jobs:
           javac -d build/structural-contracts \
             src/main/java/com/gabri/magicteam/util/FriendlyFirePolicy.java \
             src/test/java/com/gabri/magicteam/util/FriendlyFirePolicyContractTest.java \
+            src/test/java/com/gabri/magicteam/util/FlareVacuumAttributionIndexContractTest.java \
             src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java
 
       - name: Run friendly-fire policy contract
         run: java -cp build/structural-contracts com.gabri.magicteam.util.FriendlyFirePolicyContractTest
+
+      - name: Run Flare Vacuum attribution index contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.util.FlareVacuumAttributionIndexContractTest
 
       - name: Run mixin wiring contract
         run: java -cp build/structural-contracts com.gabri.magicteam.mixin.MixinWiringContractTest
