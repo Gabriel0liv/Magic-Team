@@ -48,6 +48,7 @@
     "compat.traveloptics.DragonSpiritFriendlyFireMixin",
     "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
     "compat.traveloptics.DyingStarFriendlyFireMixin",
+    "compat.traveloptics.EndEruptionFriendlyFireMixin",
     "compat.traveloptics.EnsnareFriendlyFireMixin",
     "compat.traveloptics.EternalMaelstromTridentFriendlyFireMixin",
     "compat.traveloptics.ExtendedAbyssBlastFriendlyFireMixin",
