@@ -1,0 +1,73 @@
+package com.gabri.magicteam.mixin;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/** Dependency-free regression checks for Alshanex's Familiars compatibility. */
+public final class FamiliarsCompatibilityContractTest {
+    private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
+
+    private FamiliarsCompatibilityContractTest() {
+    }
+
+    public static void main(String[] args) throws Exception {
+        mayhemDirectHitsBlockSideEffectsBeforeDamage();
+        dragonEggDoesNotResetProtectedTargetInvulnerability();
+        existingFamiliarsAdaptersRemainRegistered();
+    }
+
+    private static void mayhemDirectHitsBlockSideEffectsBeforeDamage() throws Exception {
+        String adapter = "compat.familiars.MayhemDirectHitFriendlyFireMixin";
+        Path sourcePath = MIXIN_ROOT.resolve("compat/familiars/MayhemDirectHitFriendlyFireMixin.java");
+        String config = Files.readString(MIXIN_CONFIG);
+
+        check(Files.isRegularFile(sourcePath), "Mayhem direct-hit adapter is missing");
+        check(config.contains("\"" + adapter + "\""), "Mayhem direct-hit adapter is not registered");
+
+        String source = Files.readString(sourcePath);
+        check(source.contains("EndStoneEntity"), "End Stone knockback must be covered");
+        check(source.contains("PurpurPilarEntity"), "Purpur Pillar knockback must be covered");
+        check(source.contains("PurpurBricksEntity"), "Purpur Bricks knockback must be covered");
+        check(source.contains("ChorusFlowerEntity"), "Chorus Flower teleport must be covered");
+        check(source.contains("AbstractMagicProjectile;m_5790_"),
+                "Mayhem adapter must let the Iron projectile superclass handle the impact before gating addon side effects");
+        check(source.contains("Shift.AFTER"),
+                "Mayhem adapter must gate only after the superclass impact hook");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "Mayhem direct-hit side effects must use the offensive friendly-fire policy");
+        check(source.contains("discard()") && source.contains("ci.cancel()"),
+                "protected Mayhem hits must still consume the projectile while skipping knockback/teleport");
+    }
+
+    private static void dragonEggDoesNotResetProtectedTargetInvulnerability() throws Exception {
+        String adapter = "compat.familiars.DragonEggFriendlyFireMixin";
+        Path sourcePath = MIXIN_ROOT.resolve("compat/familiars/DragonEggFriendlyFireMixin.java");
+        String config = Files.readString(MIXIN_CONFIG);
+
+        check(Files.isRegularFile(sourcePath), "Dragon Egg direct-hit adapter is missing");
+        check(config.contains("\"" + adapter + "\""), "Dragon Egg direct-hit adapter is not registered");
+
+        String source = Files.readString(sourcePath);
+        check(source.contains("f_19802_"),
+                "Dragon Egg adapter must intercept the direct target invulnerability-time write");
+        check(source.contains("invulnerableTime"),
+                "Dragon Egg adapter must preserve the mapped field write for allowed targets");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "Dragon Egg invulnerability reset must respect friendly-fire policy");
+    }
+
+    private static void existingFamiliarsAdaptersRemainRegistered() throws Exception {
+        String config = Files.readString(MIXIN_CONFIG);
+        check(config.contains("\"compat.familiars.HikenFriendlyFireMixin\""),
+                "Hiken compatibility must remain registered");
+        check(config.contains("\"compat.familiars.IllusionistDecoyContextMixin\""),
+                "Illusionist Decoy explosion context must remain registered");
+    }
+
+    private static void check(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
+        }
+    }
+}
