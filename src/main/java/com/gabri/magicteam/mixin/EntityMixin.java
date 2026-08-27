@@ -18,6 +18,10 @@ public abstract class EntityMixin {
 
     @Inject(method = "isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), cancellable = true)
     private void onIsAlliedTo(Entity other, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         Entity self = (Entity) (Object) this;
         if (!isIronsMagicEntity(self) && !isIronsMagicEntity(other)) {
             return;
