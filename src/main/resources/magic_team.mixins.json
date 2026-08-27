@@ -99,6 +99,7 @@
     "compat.traveloptics.VortexPunchFriendlyFireMixin",
 
     "compat.geomancyplus.SolarStormFriendlyFireMixin",
+    "compat.geomancyplus.TremorStepFriendlyFireMixin",
 
     "compat.familiars.HikenFriendlyFireMixin",
     "compat.familiars.IllusionistDecoyContextMixin"
