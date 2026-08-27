@@ -104,6 +104,12 @@ public final class MixinWiringContractTest {
                 "Flare Vacuum Flame Jets must receive the active original caster");
         check(flareSource.contains("@ModifyArg"),
                 "Flare Vacuum must restore caster at the Flame Jet constructor call site");
+        check(flareSource.contains("pullEntityTowards"),
+                "Flare Vacuum must intercept its direct pull side effect");
+        check(flareSource.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "Flare Vacuum pull must honor the original caster's friendly-fire policy");
+        check(flareSource.contains("CallbackInfo") && flareSource.contains("ci.cancel()"),
+                "Flare Vacuum must cancel protected pull operations before movement is written");
 
         String attributionSource = Files.readString(attribution);
         check(attributionSource.contains("getActiveDepth"),
