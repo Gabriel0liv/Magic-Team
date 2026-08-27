@@ -37,6 +37,10 @@ public final class CommandConfigContractTest {
         check(commands.contains("Commands.literal(\"list\")"), "missing spell list command");
         check(commands.contains("Commands.literal(\"message\")"), "missing message command root");
         check(commands.contains("Commands.literal(\"debug\")"), "missing debug toggle");
+        check(commands.contains("Commands.literal(\"targetnotification\")"),
+                "missing /magicteam targetnotification enabled <true|false>");
+        check(commands.contains("Notificação de alvo:"),
+                "/magicteam status must expose the target-notification state");
         check(!commands.contains("Commands.literal(\"filter\")"), "legacy filter command must be removed");
         check(!commands.contains("Commands.literal(\"save\")"), "manual save command must be removed");
 
@@ -51,6 +55,10 @@ public final class CommandConfigContractTest {
 
         check(config.contains("BooleanValue enabled"), "server config needs persistent enabled flag");
         check(config.contains("BooleanValue blockedMessageEnabled"), "server config needs message enabled flag");
+        check(config.contains("BooleanValue targetNotificationEnabled"),
+                "server config needs persistent target-notification flag");
+        check(config.contains("define(\"targetNotificationEnabled\", true)"),
+                "target notifications must default to enabled");
         check(config.contains("ConfigValue<String> blockedMessage"), "server config needs configurable blocked message");
         check(config.contains("ConfigValue<List<? extends String>> spellOverrides"), "server config needs spell overrides");
         check(!config.contains("harmfulSpells"), "legacy harmful list must be removed");
@@ -66,6 +74,10 @@ public final class CommandConfigContractTest {
                 "DamageSources mixin must defer to Iron's original result while Magic Team is disabled");
         check(utilsMixin.contains("if (!TeamUtils.isEnabled())"),
                 "target-helper mixin must defer to Iron's original method while Magic Team is disabled");
+        check(utilsMixin.contains("MagicTeamConfig.SERVER.targetNotificationEnabled()"),
+                "targeted notifications must be suppressible without changing spell targeting");
+        check(utilsMixin.contains("Utils.sendTargetedNotification"),
+                "enabled target notifications must still use Iron's original notification helper");
 
         String damageGate = isolate(teamUtils,
                 "public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell)",
