@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicTeamConfig;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
@@ -82,7 +83,8 @@ public class UtilsMixin {
                                 .withStyle(ChatFormatting.GREEN)
                 ));
             }
-            if (livingTarget instanceof ServerPlayer serverPlayer) {
+            if (livingTarget instanceof ServerPlayer serverPlayer
+                    && MagicTeamConfig.SERVER.targetNotificationEnabled()) {
                 Utils.sendTargetedNotification(serverPlayer, caster, spell);
             }
             cir.setReturnValue(true);
