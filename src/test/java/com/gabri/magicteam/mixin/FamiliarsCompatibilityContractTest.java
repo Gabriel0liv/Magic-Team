@@ -16,6 +16,7 @@ public final class FamiliarsCompatibilityContractTest {
         dragonEggDoesNotResetProtectedTargetInvulnerability();
         hostileBardSpellsHonorFriendlyFire();
         harpExplosionTreatsDamageControlAndEffectsAsOneHostileTransaction();
+        retaliatoryPetEffectsHonorFriendlyFire();
         existingFamiliarsAdaptersRemainRegistered();
     }
 
@@ -105,6 +106,26 @@ public final class FamiliarsCompatibilityContractTest {
                 "Harp Explosion explosion must execute under harmful interaction context");
         check(source.contains("try") && source.contains("finally"),
                 "Harp Explosion explosion context must always be popped");
+    }
+
+    private static void retaliatoryPetEffectsHonorFriendlyFire() throws Exception {
+        String adapter = "compat.familiars.ServerEventsRetaliationFriendlyFireMixin";
+        Path sourcePath = MIXIN_ROOT.resolve("compat/familiars/ServerEventsRetaliationFriendlyFireMixin.java");
+        String config = Files.readString(MIXIN_CONFIG);
+
+        check(Files.isRegularFile(sourcePath), "Familiars ServerEvents retaliation adapter is missing");
+        check(config.contains("\"" + adapter + "\""),
+                "Familiars ServerEvents retaliation adapter is not registered");
+
+        String source = Files.readString(sourcePath);
+        check(source.contains("onDamageTaken"),
+                "retaliation compatibility must be scoped to the LivingDamageEvent handler");
+        check(source.contains("m_7311_"),
+                "Scorcher retaliation fire ticks must be guarded");
+        check(source.contains("Lnet/minecraft/world/level/Level;m_7967_"),
+                "Plague retaliatory potion spawn must be guarded");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "retaliation must use the offensive friendly-fire policy");
     }
 
     private static void existingFamiliarsAdaptersRemainRegistered() throws Exception {
