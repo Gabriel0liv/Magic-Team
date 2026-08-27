@@ -1,5 +1,6 @@
 package com.gabri.magicteam;
 
+import com.gabri.magicteam.command.SpellIdArgumentType;
 import com.gabri.magicteam.util.MagicTeamConfig;
 import com.gabri.magicteam.util.SpellBehavior;
 import com.gabri.magicteam.util.TeamUtils;
@@ -80,33 +81,33 @@ public final class MagicTeamCommands {
                                         .executes(context -> resetMessage(context.getSource()))))
                         .then(Commands.literal("spell")
                                 .then(Commands.literal("info")
-                                        .then(Commands.argument("spell", StringArgumentType.word())
+                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .executes(context -> spellInfo(
                                                         context.getSource(),
-                                                        StringArgumentType.getString(context, "spell")
+                                                        SpellIdArgumentType.getSpellId(context, "spell")
                                                 ))))
                                 .then(Commands.literal("set")
-                                        .then(Commands.argument("spell", StringArgumentType.word())
+                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .then(Commands.literal("support")
                                                         .executes(context -> setSpellBehavior(
                                                                 context.getSource(),
-                                                                StringArgumentType.getString(context, "spell"),
+                                                                SpellIdArgumentType.getSpellId(context, "spell"),
                                                                 SpellBehavior.SUPPORT
                                                         )))
                                                 .then(Commands.literal("hostile")
                                                         .executes(context -> setSpellBehavior(
                                                                 context.getSource(),
-                                                                StringArgumentType.getString(context, "spell"),
+                                                                SpellIdArgumentType.getSpellId(context, "spell"),
                                                                 SpellBehavior.HOSTILE
                                                         )))))
                                 .then(Commands.literal("reset")
-                                        .then(Commands.argument("spell", StringArgumentType.word())
+                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .executes(context -> resetSpellBehavior(
                                                         context.getSource(),
-                                                        StringArgumentType.getString(context, "spell")
+                                                        SpellIdArgumentType.getSpellId(context, "spell")
                                                 ))))
                                 .then(Commands.literal("overrides")
                                         .executes(context -> listOverrides(context.getSource())))
