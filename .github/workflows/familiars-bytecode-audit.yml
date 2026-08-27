@@ -1,0 +1,46 @@
+name: Familiars Bytecode Audit
+
+on:
+  push:
+    branches:
+      - agent/friendly-fire-compat-2.3.3
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Inspect Alshanex Familiars v3.8 HOTFIX spell bytecode
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit/classes audit/javap
+          base='https://raw.githubusercontent.com/Gabriel0liv/MineDev/bd35cf894261143e71f7d97be4c4553303546b5d/alteracao_mods/alshanex_familiars-1.20.1_v3.8_HOTFIX/net/alshanex/alshanex_familiars/spells'
+          classes=(
+            AngelSpell BirdsSpell DefaultNoteSpell EndMayhemSpell ExplosionMelodySpell
+            HikenSpell IceAgeSpell IceChamberSpell LullabySpell MegidoSpell MusicBoltSpell
+            ShadowSummonSpell SonataSpell VibrationSpell
+          )
+          for cls in "${classes[@]}"; do
+            echo "Downloading ${cls}.class"
+            curl --fail --silent --show-error --location \
+              "$base/${cls}.class" -o "audit/classes/${cls}.class"
+            javap -c -p -s "audit/classes/${cls}.class" > "audit/javap/${cls}.txt"
+          done
+
+          echo '===== Risk-relevant bytecode ====='
+          pattern='m_7307_|applyDamage|isFriendlyFireBetween|m_6469_|m_7292_|m_5997_|m_20256_|m_20984_|f_19802_|m_7311_|m_21195_|m_6021_|m_6443_|m_6249_|Explosion|onCast|onServerCastTick|checkPreCastConditions'
+          for report in audit/javap/*.txt; do
+            echo
+            echo "===== $(basename "$report") ====="
+            grep -nE -B 6 -A 10 "$pattern" "$report" || true
+          done
