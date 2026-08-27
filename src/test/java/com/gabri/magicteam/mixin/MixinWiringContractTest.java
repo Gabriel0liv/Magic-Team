@@ -19,6 +19,7 @@ public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
     private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
+    private static final Path MOD_ENTRY = Path.of("src/main/java/com/gabri/magicteam/MagicTeam.java");
     private static final Path MOB_DISPATCHER = MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java");
     private static final Pattern RUNTIME_METHOD_CALL = Pattern.compile("\\.m_\\d+_\\s*\\(");
     private static final List<String> REQUIRED_DELAYED_HOSTILE_ADAPTERS = List.of(
@@ -91,6 +92,18 @@ public final class MixinWiringContractTest {
                 "Flare Vacuum Flame Jets must receive the active original caster");
         check(flareSource.contains("@ModifyArg"),
                 "Flare Vacuum must restore caster at the Flame Jet constructor call site");
+
+        String attributionSource = Files.readString(attribution);
+        check(attributionSource.contains("getActiveDepth"),
+                "Flare Vacuum attribution context must expose depth for leak detection");
+        check(attributionSource.contains("clearActiveContext"),
+                "Flare Vacuum attribution context must support emergency clearing");
+
+        String modEntry = Files.readString(MOD_ENTRY);
+        check(modEntry.contains("FlareVacuumAttribution.getActiveDepth"),
+                "server tick leak guard must inspect Flare Vacuum attribution context");
+        check(modEntry.contains("FlareVacuumAttribution.clearActiveContext"),
+                "server tick leak guard must clear stale Flare Vacuum attribution context");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
