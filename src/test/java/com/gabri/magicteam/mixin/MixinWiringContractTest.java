@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
  */
 public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
     private static final Path MOB_DISPATCHER = MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java");
     private static final Pattern RUNTIME_METHOD_CALL = Pattern.compile("\\.m_\\d+_\\s*\\(");
@@ -45,6 +46,7 @@ public final class MixinWiringContractTest {
 
     public static void main(String[] args) throws Exception {
         confirmedDelayedHostileBypassesHaveAdapters();
+        flareVacuumPreservesOriginalCaster();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
@@ -61,6 +63,34 @@ public final class MixinWiringContractTest {
             check(Files.readString(source).contains("TeamUtils.shouldBlockFriendlyFire"),
                     "confirmed hostile bypass adapter does not use friendly-fire policy: " + adapter);
         }
+    }
+
+    private static void flareVacuumPreservesOriginalCaster() throws IOException {
+        String adapter = "compat.traveloptics.FlareVacuumAttributionMixin";
+        Path attribution = UTIL_ROOT.resolve("FlareVacuumAttribution.java");
+        Path gyro = MIXIN_ROOT.resolve("compat/traveloptics/GyroSlashFriendlyFireMixin.java");
+        Path flareVacuum = MIXIN_ROOT.resolve("compat/traveloptics/FlareVacuumAttributionMixin.java");
+        Set<String> registered = readMixinRegistrations(Files.readString(MIXIN_CONFIG));
+
+        check(Files.isRegularFile(attribution), "Flare Vacuum attribution tracker is missing");
+        check(Files.isRegularFile(flareVacuum), "Flare Vacuum attribution mixin is missing");
+        check(registered.contains(adapter), "Flare Vacuum attribution mixin is not registered");
+
+        String gyroSource = Files.readString(gyro);
+        check(gyroSource.contains("FlareVacuumAttribution.record"),
+                "Gyro Slash must record the caster only after Flare Vacuum is applied");
+        check(gyroSource.contains("if (applied)"),
+                "Gyro Slash must not replace attribution when addEffect rejects the reapplication");
+
+        String flareSource = Files.readString(flareVacuum);
+        check(flareSource.contains("FlareVacuumAttribution.begin"),
+                "Flare Vacuum tick must enter the stored caster scope");
+        check(flareSource.contains("FlareVacuumAttribution.end"),
+                "Flare Vacuum tick must always leave the stored caster scope");
+        check(flareSource.contains("FlareVacuumAttribution.getActiveSource"),
+                "Flare Vacuum Flame Jets must receive the active original caster");
+        check(flareSource.contains("@ModifyArg"),
+                "Flare Vacuum must restore caster at the Flame Jet constructor call site");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
