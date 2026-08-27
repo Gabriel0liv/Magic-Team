@@ -62,6 +62,9 @@ jobs:
       - name: Clean Forge build
         run: ./gradlew clean build --stacktrace
 
+      - name: Run Forge GameTest server
+        run: ./gradlew runGameTestServer --stacktrace
+
       - name: Verify generated refmap
         shell: bash
         run: |
