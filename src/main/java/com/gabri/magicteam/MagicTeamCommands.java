@@ -64,6 +64,13 @@ public final class MagicTeamCommands {
                                                 context.getSource(),
                                                 BoolArgumentType.getBool(context, "value")
                                         ))))
+                        .then(Commands.literal("targetnotification")
+                                .then(Commands.literal("enabled")
+                                        .then(Commands.argument("value", BoolArgumentType.bool())
+                                                .executes(context -> setTargetNotificationEnabled(
+                                                        context.getSource(),
+                                                        BoolArgumentType.getBool(context, "value")
+                                                )))))
                         .then(Commands.literal("message")
                                 .then(Commands.literal("enabled")
                                         .then(Commands.argument("value", BoolArgumentType.bool())
@@ -145,6 +152,8 @@ public final class MagicTeamCommands {
         source.sendSuccess(() -> Component.literal("Overrides: " + overrides), false);
         source.sendSuccess(() -> Component.literal("Mensagem de bloqueio: "
                 + (MagicTeamConfig.SERVER.blockedMessageEnabled() ? "ATIVADA" : "DESATIVADA")), false);
+        source.sendSuccess(() -> Component.literal("Notificação de alvo: "
+                + (MagicTeamConfig.SERVER.targetNotificationEnabled() ? "ATIVADA" : "DESATIVADA")), false);
         source.sendSuccess(() -> Component.literal("Debug: " + (TeamUtils.isDebugEnabled() ? "ATIVADO" : "DESATIVADO")
                 + " (não persistente)"), false);
         source.sendSuccess(() -> Component.literal("Babel Core: "
@@ -176,6 +185,17 @@ public final class MagicTeamCommands {
                 () -> Component.literal("Debug do Magic Team " + (enabled ? "ATIVADO" : "DESATIVADO")
                         + ". Esta opção não persiste após reiniciar.")
                         .withStyle(enabled ? ChatFormatting.YELLOW : ChatFormatting.GRAY),
+                true
+        );
+        return 1;
+    }
+
+    private static int setTargetNotificationEnabled(CommandSourceStack source, boolean enabled) {
+        MagicTeamConfig.SERVER.setTargetNotificationEnabled(enabled);
+        MagicTeamConfig.saveServerConfig();
+        source.sendSuccess(
+                () -> Component.literal("Notificação de alvo " + (enabled ? "ATIVADA" : "DESATIVADA") + ".")
+                        .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.GRAY),
                 true
         );
         return 1;
