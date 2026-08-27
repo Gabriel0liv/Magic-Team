@@ -203,6 +203,11 @@ public class TeamUtils {
             return true;
         }
 
+        SpellBehavior explicitOverride = spell == null ? null : getSpellOverride(spell.getSpellId());
+        if (explicitOverride != null && (source == target || areAllies(source, target))) {
+            return explicitOverride == SpellBehavior.SUPPORT || !shouldBlockFriendlyFire(source, target);
+        }
+
         MagicTeamEffectContext.InteractionType effectiveType = interactionType == null
                 ? MagicTeamEffectContext.InteractionType.GENERIC
                 : interactionType;
@@ -227,6 +232,9 @@ public class TeamUtils {
     }
 
     public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell) {
+        if (spell != null && getSpellBehavior(spell) == SpellBehavior.SUPPORT) {
+            return false;
+        }
         return shouldBlockFriendlyFire(attacker, target);
     }
 
