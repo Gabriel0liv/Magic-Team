@@ -91,6 +91,8 @@
     "compat.traveloptics.SupermassiveBlackHoleFriendlyFireMixin",
     "compat.traveloptics.SyncedAoeEntityFriendlyFireMixin",
     "compat.traveloptics.TectonicCrestFriendlyFireMixin",
+    "compat.traveloptics.TidalGraspEffectContextMixin",
+    "compat.traveloptics.TidalGraspFriendlyFireMixin",
     "compat.traveloptics.VoidSlashContextMixin",
     "compat.traveloptics.VortexPunchFriendlyFireMixin",
 
