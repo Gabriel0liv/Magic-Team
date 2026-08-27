@@ -22,12 +22,24 @@ import net.minecraftforge.entity.PartEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.function.Predicate;
 
 @Mixin(value = Utils.class, remap = false)
 public class UtilsMixin {
+
+    /**
+     * Central gate for Iron's targeted-spell warning. Keeping the check on the
+     * notification helper itself also covers addons that reuse this Iron's API.
+     */
+    @Inject(method = "sendTargetedNotification", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void onSendTargetedNotification(ServerPlayer target, LivingEntity caster, AbstractSpell spell, CallbackInfo ci) {
+        if (TeamUtils.isEnabled() && !MagicTeamConfig.SERVER.targetNotificationEnabled()) {
+            ci.cancel();
+        }
+    }
 
     @Inject(
             method = "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z",
@@ -83,8 +95,7 @@ public class UtilsMixin {
                                 .withStyle(ChatFormatting.GREEN)
                 ));
             }
-            if (livingTarget instanceof ServerPlayer serverPlayer
-                    && MagicTeamConfig.SERVER.targetNotificationEnabled()) {
+            if (livingTarget instanceof ServerPlayer serverPlayer) {
                 Utils.sendTargetedNotification(serverPlayer, caster, spell);
             }
             cir.setReturnValue(true);
