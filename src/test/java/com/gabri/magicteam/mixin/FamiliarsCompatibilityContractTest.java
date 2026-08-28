@@ -6,7 +6,7 @@ import java.nio.file.Path;
 /** Dependency-free regression checks for Alshanex's Familiars compatibility. */
 public final class FamiliarsCompatibilityContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
-    private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
+    private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.familiars.mixins.json");
 
     private FamiliarsCompatibilityContractTest() {
     }
