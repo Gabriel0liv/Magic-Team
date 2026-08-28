@@ -18,7 +18,13 @@ import java.util.regex.Pattern;
 public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
     private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
-    private static final Path MIXIN_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
+    private static final List<Path> MIXIN_CONFIGS = List.of(
+            Path.of("src/main/resources/magic_team.mixins.json"),
+            Path.of("src/main/resources/magic_team.traveloptics.mixins.json"),
+            Path.of("src/main/resources/magic_team.geomancyplus.mixins.json"),
+            Path.of("src/main/resources/magic_team.familiars.mixins.json"),
+            Path.of("src/main/resources/magic_team.cataclysm.mixins.json")
+    );
     private static final Path MOD_ENTRY = Path.of("src/main/java/com/gabri/magicteam/MagicTeam.java");
     private static final Path MOB_DISPATCHER = MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java");
     private static final Pattern RUNTIME_METHOD_CALL = Pattern.compile("\\.m_\\d+_\\s*\\(");
@@ -66,8 +72,7 @@ public final class MixinWiringContractTest {
     }
 
     private static void confirmedDelayedHostileBypassesHaveAdapters() throws IOException {
-        String json = Files.readString(MIXIN_CONFIG);
-        Set<String> registered = readMixinRegistrations(json);
+        Set<String> registered = readAllMixinRegistrations();
 
         for (String adapter : REQUIRED_DELAYED_HOSTILE_ADAPTERS) {
             Path source = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
@@ -83,7 +88,7 @@ public final class MixinWiringContractTest {
         Path attribution = UTIL_ROOT.resolve("FlareVacuumAttribution.java");
         Path gyro = MIXIN_ROOT.resolve("compat/traveloptics/GyroSlashFriendlyFireMixin.java");
         Path flareVacuum = MIXIN_ROOT.resolve("compat/traveloptics/FlareVacuumAttributionMixin.java");
-        Set<String> registered = readMixinRegistrations(Files.readString(MIXIN_CONFIG));
+        Set<String> registered = readAllMixinRegistrations();
 
         check(Files.isRegularFile(attribution), "Flare Vacuum attribution tracker is missing");
         check(Files.isRegularFile(flareVacuum), "Flare Vacuum attribution mixin is missing");
@@ -154,7 +159,7 @@ public final class MixinWiringContractTest {
         String adapter = "compat.traveloptics.TidalGraspEffectContextMixin";
         Path spell = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java");
         Path effect = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspEffectContextMixin.java");
-        Set<String> registered = readMixinRegistrations(Files.readString(MIXIN_CONFIG));
+        Set<String> registered = readAllMixinRegistrations();
 
         check(Files.isRegularFile(spell), "Tidal Grasp spell adapter is missing");
         check(Files.isRegularFile(effect), "Tidal Grasp delayed-effect context adapter is missing");
@@ -224,8 +229,7 @@ public final class MixinWiringContractTest {
     }
 
     private static void allMixinSourcesAreRegisteredAndAllRegistrationsExist() throws IOException {
-        String json = Files.readString(MIXIN_CONFIG);
-        Set<String> registered = readMixinRegistrations(json);
+        Set<String> registered = readAllMixinRegistrations();
         Set<String> sources = new LinkedHashSet<>();
 
         try (var paths = Files.walk(MIXIN_ROOT)) {
@@ -254,6 +258,15 @@ public final class MixinWiringContractTest {
                 "both mob tick redirects must target the Mojmap customServerAiStep selector");
         check(!source.contains("method = \"m_8024_()V\""),
                 "runtime SRG name must not be hardcoded for the vanilla override");
+    }
+
+    private static Set<String> readAllMixinRegistrations() throws IOException {
+        Set<String> result = new LinkedHashSet<>();
+        for (Path config : MIXIN_CONFIGS) {
+            check(Files.isRegularFile(config), "mixin config is missing: " + config);
+            result.addAll(readMixinRegistrations(Files.readString(config)));
+        }
+        return result;
     }
 
     private static Set<String> readMixinRegistrations(String json) {
