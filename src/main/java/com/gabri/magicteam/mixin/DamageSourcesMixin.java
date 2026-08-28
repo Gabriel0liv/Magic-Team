@@ -13,9 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class DamageSourcesMixin {
 
     /**
-     * Mirrors Iron's friendly-fire contract while resolving projectile/summon ownership
-     * through Magic Team/Babel. Being allied alone is not enough to block damage:
-     * scoreboard friendlyFire=true must allow it.
+     * Replaces Iron's magic friendly-fire decision while Magic Team is enabled.
+     * Babel resolves projectile/summon ownership and alliance identity; vanilla
+     * scoreboard friendlyFire is intentionally not a permission input for magic.
      */
     @Inject(method = "isFriendlyFireBetween", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onIsFriendlyFireBetween(Entity attacker, Entity target, CallbackInfoReturnable<Boolean> cir) {
@@ -26,8 +26,8 @@ public class DamageSourcesMixin {
     }
 
     /**
-     * Blocks spell damage only when the resolved allied relation is protected by
-     * the scoreboard team's friendly-fire setting.
+     * Blocks hostile spell damage between distinct allies whenever Magic Team is enabled.
+     * Support-classified spells keep their existing ally-allowed behavior.
      */
     @Inject(method = "applyDamage", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onApplyDamage(Entity target, float baseAmount, net.minecraft.world.damagesource.DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
