@@ -1,0 +1,51 @@
+name: Structural Contracts
+
+on:
+  push:
+    branches:
+      - agent/friendly-fire-compat-2.3.3
+  pull_request:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile dependency-free contracts
+        run: |
+          mkdir -p build/structural-contracts
+          javac -d build/structural-contracts \
+            src/main/java/com/gabri/magicteam/util/FriendlyFirePolicy.java \
+            src/main/java/com/gabri/magicteam/util/ExpiringAttributionIndex.java \
+            src/test/java/com/gabri/magicteam/util/FriendlyFirePolicyContractTest.java \
+            src/test/java/com/gabri/magicteam/util/FlareVacuumAttributionIndexContractTest.java \
+            src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java \
+            src/test/java/com/gabri/magicteam/mixin/ArchitectureBoundaryContractTest.java \
+            src/test/java/com/gabri/magicteam/mixin/FamiliarsCompatibilityContractTest.java \
+            src/test/java/com/gabri/magicteam/commands/CommandConfigContractTest.java
+
+      - name: Run friendly-fire policy contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.util.FriendlyFirePolicyContractTest
+
+      - name: Run Flare Vacuum attribution index contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.util.FlareVacuumAttributionIndexContractTest
+
+      - name: Run mixin wiring contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.mixin.MixinWiringContractTest
+
+      - name: Run architecture boundary contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.mixin.ArchitectureBoundaryContractTest
+
+      - name: Run Familiars compatibility contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.mixin.FamiliarsCompatibilityContractTest
+
+      - name: Run command/config UX contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.commands.CommandConfigContractTest

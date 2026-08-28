@@ -32,7 +32,8 @@ public class LivingEntityMixin {
 
         LivingEntity target = (LivingEntity) (Object) this;
         AbstractSpell spell = MagicTeamEffectContext.getSpell();
-        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell)) {
+        MagicTeamEffectContext.InteractionType interactionType = MagicTeamEffectContext.getInteractionType();
+        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell, interactionType)) {
             cir.setReturnValue(false);
         }
     }
@@ -53,7 +54,8 @@ public class LivingEntityMixin {
 
         LivingEntity target = (LivingEntity) (Object) this;
         AbstractSpell spell = MagicTeamEffectContext.getSpell();
-        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell)) {
+        MagicTeamEffectContext.InteractionType interactionType = MagicTeamEffectContext.getInteractionType();
+        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell, interactionType)) {
             cir.setReturnValue(false);
         }
     }

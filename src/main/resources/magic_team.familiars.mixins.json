@@ -1,0 +1,21 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.gabri.magicteam.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "magic_team.refmap.json",
+  "mixins": [
+    "compat.familiars.HikenFriendlyFireMixin",
+    "compat.familiars.IllusionistDecoyContextMixin",
+    "compat.familiars.MayhemDirectHitFriendlyFireMixin",
+    "compat.familiars.DragonEggFriendlyFireMixin",
+    "compat.familiars.LullabyFriendlyFireMixin",
+    "compat.familiars.SonataFriendlyFireMixin",
+    "compat.familiars.HarpExplosionFriendlyFireMixin",
+    "compat.familiars.ServerEventsRetaliationFriendlyFireMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -16,19 +16,33 @@ public final class MagicTeamEffectContext {
         VANILLA_POTION
     }
 
+    public enum InteractionType {
+        GENERIC,
+        HARMFUL,
+        BENEFICIAL
+    }
+
     private MagicTeamEffectContext() {
     }
 
     public static void push(Entity source, AbstractSpell spell, CastSource castSource) {
-        push(source, spell, castSource, Origin.SPELL);
+        push(source, spell, castSource, Origin.SPELL, InteractionType.GENERIC);
+    }
+
+    public static void push(Entity source, AbstractSpell spell, CastSource castSource, InteractionType interactionType) {
+        push(source, spell, castSource, Origin.SPELL, interactionType);
     }
 
     public static void push(Entity source) {
-        push(source, null, null, Origin.ENTITY_SCOPE);
+        push(source, null, null, Origin.ENTITY_SCOPE, InteractionType.GENERIC);
+    }
+
+    public static void push(Entity source, InteractionType interactionType) {
+        push(source, null, null, Origin.ENTITY_SCOPE, interactionType);
     }
 
     public static void pushVanillaPotion(Entity source) {
-        push(source, null, null, Origin.VANILLA_POTION);
+        push(source, null, null, Origin.VANILLA_POTION, InteractionType.GENERIC);
     }
 
     /**
@@ -36,11 +50,12 @@ public final class MagicTeamEffectContext {
      */
     public static void push(Entity source, AbstractSpell spell, CastSource castSource, boolean vanillaPotion) {
         Origin origin = vanillaPotion ? Origin.VANILLA_POTION : (spell != null ? Origin.SPELL : Origin.ENTITY_SCOPE);
-        push(source, spell, castSource, origin);
+        push(source, spell, castSource, origin, InteractionType.GENERIC);
     }
 
-    private static void push(Entity source, AbstractSpell spell, CastSource castSource, Origin origin) {
-        CURRENT.get().push(new Context(source, spell, castSource, origin));
+    private static void push(Entity source, AbstractSpell spell, CastSource castSource, Origin origin, InteractionType interactionType) {
+        InteractionType normalizedInteraction = interactionType == null ? InteractionType.GENERIC : interactionType;
+        CURRENT.get().push(new Context(source, spell, castSource, origin, normalizedInteraction));
     }
 
     public static void pop() {
@@ -91,17 +106,29 @@ public final class MagicTeamEffectContext {
         return context != null ? context.origin : null;
     }
 
+    public static InteractionType getInteractionType() {
+        Context context = current();
+        return context != null ? context.interactionType : null;
+    }
+
+    public static boolean isHarmfulInteraction() {
+        return getInteractionType() == InteractionType.HARMFUL;
+    }
+
     public static boolean isVanillaPotionApplication() {
         return getOrigin() == Origin.VANILLA_POTION;
     }
 
     /**
-     * Only magic/spell scopes are allowed to influence LivingEntity#hurt.
-     * Vanilla potion scopes exist solely to keep normal potion behavior untouched.
+     * Magic/spell scopes may influence LivingEntity#hurt unless the scope is
+     * explicitly beneficial. Vanilla potion scopes always remain untouched.
      */
     public static boolean shouldFilterDamage() {
         Origin origin = getOrigin();
-        return origin != null && origin != Origin.VANILLA_POTION;
+        InteractionType interactionType = getInteractionType();
+        return origin != null
+                && origin != Origin.VANILLA_POTION
+                && interactionType != InteractionType.BENEFICIAL;
     }
 
     public static String describeCurrentContext() {
@@ -117,6 +144,7 @@ public final class MagicTeamEffectContext {
         String castSource = context.castSource == null ? "null" : context.castSource.name();
         return "depth=" + stack.size()
                 + ", origin=" + context.origin
+                + ", interaction=" + context.interactionType
                 + ", source=" + sourceType
                 + ", spell=" + spellId
                 + ", castSource=" + castSource;
@@ -131,6 +159,6 @@ public final class MagicTeamEffectContext {
         return context;
     }
 
-    private record Context(Entity source, AbstractSpell spell, CastSource castSource, Origin origin) {
+    private record Context(Entity source, AbstractSpell spell, CastSource castSource, Origin origin, InteractionType interactionType) {
     }
 }

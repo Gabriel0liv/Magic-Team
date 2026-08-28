@@ -1,5 +1,6 @@
 package com.gabri.magicteam.util;
 
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
@@ -9,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class MagicTeamConfig {
+    public static final String DEFAULT_BLOCKED_MESSAGE = "{\"text\":\"Você não pode ferir um aliado.\",\"color\":\"red\"}";
+
     public static final Server SERVER;
     public static final ForgeConfigSpec SERVER_SPEC;
 
@@ -37,61 +40,115 @@ public final class MagicTeamConfig {
         }
     }
 
+    /** Reloads the already-open Forge server config from disk and clears cached ConfigValue reads. */
+    public static boolean reloadServerConfig() {
+        ModConfig config = serverConfig;
+        if (config == null || !(config.getConfigData() instanceof CommentedFileConfig fileConfig)) {
+            return false;
+        }
+
+        fileConfig.load();
+        SERVER_SPEC.acceptConfig(fileConfig);
+        return true;
+    }
+
     public static List<String> copyStrings(List<? extends String> values) {
         return values == null ? List.of() : new ArrayList<>(values);
     }
 
     public static final class Server {
-        public final ForgeConfigSpec.ConfigValue<List<? extends String>> beneficialSpells;
-        public final ForgeConfigSpec.ConfigValue<List<? extends String>> harmfulSpells;
+        public final ForgeConfigSpec.BooleanValue enabled;
+        public final ForgeConfigSpec.BooleanValue targetNotificationEnabled;
+        public final ForgeConfigSpec.BooleanValue blockedMessageEnabled;
+        public final ForgeConfigSpec.ConfigValue<String> blockedMessage;
+        public final ForgeConfigSpec.ConfigValue<List<? extends String>> spellOverrides;
 
         Server(ForgeConfigSpec.Builder builder) {
             builder.comment("Magic-Team server config").push("magic_team");
+
+            enabled = builder
+                    .comment("Master switch. When false, Magic Team leaves gameplay interactions untouched.")
+                    .define("enabled", true);
+
+            targetNotificationEnabled = builder
+                    .comment("Show Iron's targeted-spell notification to the player being targeted.",
+                            "When false, the target is not told that another entity is aiming/casting a targeted spell at them.")
+                    .define("targetNotificationEnabled", true);
+
+            builder.push("message");
+            blockedMessageEnabled = builder
+                    .comment("Show action-bar feedback to a player when Magic Team blocks their allied attack/target.")
+                    .define("enabled", true);
+            blockedMessage = builder
+                    .comment("Blocked-action message. Accepts plain text or a vanilla text-component JSON string, like /tellraw.")
+                    .define("text", DEFAULT_BLOCKED_MESSAGE);
+            builder.pop();
+
             builder.push("spells");
-            beneficialSpells = builder
-                    .comment("Spells that should be treated as beneficial on allies and allowed for target selection.",
-                            "Use full IDs like `irons_spellbooks:heal` or short paths like `heal`.")
-                    .defineList("beneficialSpells", List.of(
-                            "fortify",
-                            "haste",
-                            "cloud_of_regeneration",
-                            "cleanse",
-                            "blessing_of_life",
-                            "healing_circle",
-                            "wisp"
-                    ), value -> value instanceof String);
-
-            harmfulSpells = builder
-                    .comment("Spells that should be treated as harmful on allies and blocked for target selection.",
-                            "Use full IDs like `irons_spellbooks:root` or short paths like `root`.")
-                    .defineList("harmfulSpells", List.of(
-                            "slow",
-                            "blight",
-                            "root",
-                            "heat_surge",
-                            "poison_splash",
-                            "acid_spit"
-                    ), value -> value instanceof String);
+            spellOverrides = builder
+                    .comment("Admin overrides only. Format: namespace:spell=support or namespace:spell=hostile.",
+                            "Spells not listed here use Magic Team's built-in classification.")
+                    .defineList("overrides", List.of(), MagicTeamConfig::isValidOverrideEntry);
             builder.pop();
+
             builder.pop();
         }
 
-        public List<String> beneficialSpells() {
-            return MagicTeamConfig.copyStrings(beneficialSpells.get());
+        public boolean enabled() {
+            return enabled.get();
         }
 
-        public List<String> harmfulSpells() {
-            return MagicTeamConfig.copyStrings(harmfulSpells.get());
+        public void setEnabled(boolean value) {
+            enabled.set(value);
+        }
+
+        public boolean targetNotificationEnabled() {
+            return targetNotificationEnabled.get();
+        }
+
+        public void setTargetNotificationEnabled(boolean value) {
+            targetNotificationEnabled.set(value);
+        }
+
+        public boolean blockedMessageEnabled() {
+            return blockedMessageEnabled.get();
+        }
+
+        public void setBlockedMessageEnabled(boolean value) {
+            blockedMessageEnabled.set(value);
+        }
+
+        public String blockedMessage() {
+            return blockedMessage.get();
+        }
+
+        public void setBlockedMessage(String value) {
+            blockedMessage.set(value == null ? "" : value);
+        }
+
+        public List<String> spellOverrides() {
+            return MagicTeamConfig.copyStrings(spellOverrides.get());
         }
 
         @SuppressWarnings("unchecked")
-        public void setBeneficialSpells(List<String> values) {
-            ((ForgeConfigSpec.ConfigValue<List<? extends String>>) (Object) beneficialSpells).set(MagicTeamConfig.copyStrings(values));
+        public void setSpellOverrides(List<String> values) {
+            ((ForgeConfigSpec.ConfigValue<List<? extends String>>) (Object) spellOverrides)
+                    .set(MagicTeamConfig.copyStrings(values));
+        }
+    }
+
+    private static boolean isValidOverrideEntry(Object value) {
+        if (!(value instanceof String entry)) {
+            return false;
         }
 
-        @SuppressWarnings("unchecked")
-        public void setHarmfulSpells(List<String> values) {
-            ((ForgeConfigSpec.ConfigValue<List<? extends String>>) (Object) harmfulSpells).set(MagicTeamConfig.copyStrings(values));
+        int separator = entry.lastIndexOf('=');
+        if (separator <= 0 || separator == entry.length() - 1) {
+            return false;
         }
+
+        String spellId = entry.substring(0, separator).trim();
+        String behavior = entry.substring(separator + 1).trim();
+        return spellId.contains(":") && SpellBehavior.parse(behavior) != null;
     }
 }

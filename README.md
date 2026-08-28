@@ -1,99 +1,95 @@
 ## Overview
 
-Magic-Team is a server-side Forge mod for Minecraft 1.20.1 that enforces team-based spell protection for Iron's Spells 'n Spellbooks. The mod is designed for servers where allies should be safe from hostile spell targeting, hostile spell effects, and spell damage, while still being able to receive helpful spells from teammates.
+Magic-Team is a server-side Forge mod for Minecraft 1.20.1 that enforces team-based spell protection for Iron's Spells 'n Spellbooks. The mod is designed for servers where allies should be safe from hostile spell targeting, hostile spell effects, and spell damage while still being able to receive support spells from teammates.
 
-This mod is meant for SMPs, modpacks, and private servers where combat groups need a simple rule set: allies should cooperate without accidental friendly fire, and non-allies should not receive positive support spells from enemy casters.
-
-## The Problem
-
-In spell-heavy servers, team rules alone are not always enough. Many magic systems allow spells to:
-
-1. Target a living entity directly
-2. Apply a beneficial or harmful status effect
-3. Deal magic damage without using normal melee combat rules
-
-Without extra protection, players can accidentally or intentionally:
-
-1. Cast debuffs on teammates during combat
-2. Hit allies with spell damage
-3. Apply buffs to enemy players who should not receive support
-4. Bypass the intended meaning of teams by using spells instead of weapons
-
-Magic-Team closes those gaps by checking team relationships at runtime.
+Scoreboard alliance and offensive permission are separate concepts: players remain allies even when their team allows friendly fire. Hostile interactions follow the team's `friendlyFire` setting instead of redefining the alliance itself.
 
 ## How It Works
 
 Magic-Team uses a layered protection model:
 
-1. **Target Validation**: Before a spell locks onto a living target, the mod checks whether the spell is classified as beneficial or harmful.
-2. **Effect Validation**: When a spell tries to apply a status effect, the mod checks the source and the target before allowing it through.
-3. **Damage Validation**: When spell damage is applied, the mod blocks hostile magical damage between allies.
-4. **Team Resolution**: The mod resolves owners for summons, projectiles, and related entities so team checks still work in combat chains.
-
-The result is simple: beneficial spells can still help allies, harmful spells are blocked from targeting allies, and spell damage is prevented between allied players.
+1. **Target Validation**: hostile spells respect allied friendly-fire rules before locking onto a target.
+2. **Effect Validation**: hostile spell effects are filtered before they apply to protected allies.
+3. **Damage Validation**: spell damage, projectiles, AOEs and supported addon paths respect the same friendly-fire decision.
+4. **Team Resolution**: Babel Core resolves root owners for summons, projectiles and related entities.
+5. **Admin Overrides**: every registered Iron's spell can be explicitly treated as `support` or `hostile`; spells without an override use Magic Team's built-in classification.
 
 ## Features
 
-* **Server-Side Only**: No client installation is required for players
-* **Team-Based Protection**: Ally checks are the core rule used at runtime
-* **Target Blocking**: Harmful spells cannot lock onto allied targets
-* **Effect Blocking**: Harmful spell effects are stopped before they apply to allies
-* **Damage Blocking**: Allied spell damage is prevented
-* **Configurable Spell Lists**: Beneficial and harmful spell lists can be edited from commands
-* **Registry-Aware Autocomplete**: Spell suggestions come from the Iron's Spells registry
+* **Server-Side Only**: players do not need Magic Team installed on the client.
+* **Global Runtime Toggle**: disable all Magic Team gameplay filtering without removing the mod or restarting the server.
+* **Team-Based Protection**: scoreboard friendly-fire permission remains authoritative for hostile interactions.
+* **Spell Overrides**: admins can override any registered Iron's/addon spell as `support` or `hostile`.
+* **Registry-Aware Autocomplete**: command suggestions include all spells currently registered in the Iron's spell registry, including normal addons.
+* **Configurable Feedback**: the blocked-action message accepts plain text or vanilla tellraw-style JSON components.
+* **Runtime Debugging**: an optional non-persistent debug mode logs friendly-fire decisions for troubleshooting.
 
 ## Configuration
 
-The mod stores its server configuration in the Forge server config file under the `magic_team` section. The following options are available:
+The Forge server config stores only server policy and explicit admin overrides:
 
 ```toml
+[magic_team]
+enabled = true
+
+[magic_team.message]
+enabled = true
+text = '{"text":"Você não pode ferir um aliado.","color":"red"}'
+
 [magic_team.spells]
-beneficialSpells = ["fortify", "haste", "cloud_of_regeneration", "cleanse", "blessing_of_life", "healing_circle", "wisp"]
-harmfulSpells = ["slow", "blight", "root", "heat_surge", "poison_splash", "acid_spit"]
+overrides = ["examplemod:some_spell=support", "examplemod:other_spell=hostile"]
 ```
 
-* Beneficial spells are treated as safe for allied targeting.
-* Harmful spells are blocked from allied targeting.
-* The lists accept either full IDs like `irons_spellbooks:root` or short paths like `root`.
+Spells that are not present in `overrides` use Magic Team's built-in classification. The old beneficial/harmful administration lists are no longer used.
 
 ## Commands
 
-All commands require operator permission level 2.
-
-### Save and Reload
+All commands require operator permission level 2. Changes that belong to the server config are saved immediately.
 
 ```text
-/magicteam save
+/magicteam enabled <true|false>
+/magicteam status
 /magicteam reload
+/magicteam debug <true|false>
+
+/magicteam message enabled <true|false>
+/magicteam message set <plain text or JSON component>
+/magicteam message reset
+
+/magicteam spell info <spell>
+/magicteam spell set <spell> support
+/magicteam spell set <spell> hostile
+/magicteam spell reset <spell>
+/magicteam spell overrides
+/magicteam spell list [namespace]
 ```
 
-Saves the current server config or reloads the current config state.
+`/magicteam enabled false` makes Magic Team transparent to gameplay while leaving its commands available. `/magicteam reload` rereads the Forge server config from disk. Debug mode intentionally resets after a server restart.
 
-### Spell Filters
+`spell set` creates an explicit override. `spell reset` removes it and returns the spell to Magic Team's built-in behavior. Full registry IDs are stored in the config; short spell paths are accepted only when they resolve unambiguously.
+
+The message command accepts either ordinary text:
 
 ```text
-/magicteam filter view beneficial
-/magicteam filter view harmful
-/magicteam filter add beneficial <spell>
-/magicteam filter add harmful <spell>
-/magicteam filter remove beneficial <spell>
-/magicteam filter remove harmful <spell>
+/magicteam message set Você não pode ferir um aliado!
 ```
 
-These commands manage the beneficial and harmful spell lists used for target blocking.
+or a vanilla text component:
+
+```text
+/magicteam message set {"text":"Você não pode ferir um aliado!","color":"red","bold":true}
+```
+
+Malformed JSON is rejected instead of being saved.
 
 ## Compatibility
 
 * **Minecraft Version**: 1.20.1
 * **Mod Loader**: Forge 47.4.x+
-* **Dependency**: Iron's Spells 'n Spellbooks
+* **Dependencies**: Iron's Spells 'n Spellbooks and Babel Core
 * **Side**: Server-side
 
-Addon compatibility can vary. Magic-Team works best when an addon uses standard magic system. Some addons apply damage or debuffs through custom entities, delayed explosions, or non-standard hooks, and those cases may need extra integration or may not be fully covered.
-
-## License
-
-Magic-Team is distributed under a proprietary license. See [LICENSE.txt](/C:/Users/gabri/Desktop/Mods%20Próprios/Magic-Team/Magic-Team/LICENSE.txt) for the full terms.
+Magic Team 2.3.3 also contains explicit compatibility work for the audited Travel Optics, GTBC Geomancy Plus and Alshanex's Familiars hostile paths. Addons that register normal `AbstractSpell` entries automatically appear in the spell command autocomplete even when no special gameplay adapter is required.
 
 ## Why This Mod?
 
@@ -103,10 +99,13 @@ It helps with:
 
 * Preventing teammates from accidentally debuffing each other
 * Keeping allied spell support reliable
-* Stopping hostile spell damage between allies
-* Preserving clear team roles in PvP and cooperative PvE
+* Stopping hostile spell damage when scoreboard friendly fire is disabled
+* Allowing hostile allied combat when scoreboard friendly fire is enabled
+* Preserving summon, owner and ally identity independently from offensive permission
 
-If two players are not on the same team, the mod does not treat them as protected allies.
+## License
+
+Magic-Team is distributed under a proprietary license. See `LICENSE.txt` for the full terms.
 
 ## Credits
 
