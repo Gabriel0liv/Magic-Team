@@ -1,34 +1,25 @@
 package com.gabri.magicteam.util;
 
 /**
- * Pure policy for deciding whether an allied interaction should be blocked as friendly fire.
- * Kept independent from Minecraft types so the semantics can be regression-tested directly.
+ * Pure policy for deciding whether Magic Team must block a hostile magical
+ * interaction between two resolved entities.
+ *
+ * <p>Vanilla scoreboard friendlyFire is intentionally not part of this policy.
+ * Vanilla combat remains Minecraft's responsibility; this helper is used only
+ * from Magic Team's magic/addon interception points.</p>
  */
 final class FriendlyFirePolicy {
     private FriendlyFirePolicy() {
     }
 
-    static boolean shouldBlock(boolean allied, boolean hasTeamRelation, boolean friendlyFireAllowed) {
-        return shouldBlock(false, allied, hasTeamRelation, friendlyFireAllowed);
-    }
-
-    static boolean shouldBlock(boolean sameEntity, boolean allied, boolean hasTeamRelation, boolean friendlyFireAllowed) {
-        // Friendly fire is a relation between distinct entities. A spell applying
-        // a helper/buff/debuff to its own caster must not be classified as teammate damage.
-        if (sameEntity) {
+    static boolean shouldBlock(boolean sameResolvedEntity, boolean allied) {
+        // Self/root-self spell helpers are not teammate hostile damage.
+        if (sameResolvedEntity) {
             return false;
         }
 
-        if (!allied) {
-            return false;
-        }
-
-        // Preserve root-owner protection between distinct entities when Babel reports
-        // an alliance without a scoreboard team (for example a projectile and its owner).
-        if (!hasTeamRelation) {
-            return true;
-        }
-
-        return !friendlyFireAllowed;
+        // Hostile magic is blocked between distinct allies whenever Magic Team
+        // is enabled. The caller handles the global enabled/disabled switch.
+        return allied;
     }
 }
