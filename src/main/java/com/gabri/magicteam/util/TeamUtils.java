@@ -9,7 +9,6 @@ import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrownPotion;
-import net.minecraft.world.scores.Team;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +48,7 @@ public class TeamUtils {
 
     /**
      * Determina se duas entidades devem ser tratadas como aliadas no momento atual.
-     * Aliança e bloqueio de friendly fire são conceitos separados.
+     * Aliança e proteção mágica são conceitos separados.
      */
     public static boolean areAllies(Entity a, Entity b) {
         if (a == null || b == null) {
@@ -68,7 +67,10 @@ public class TeamUtils {
     }
 
     /**
-     * Decides whether an offensive interaction must be blocked as friendly fire.
+     * Decides whether Magic Team must block an offensive magical interaction.
+     * Vanilla scoreboard friendlyFire is intentionally irrelevant here: vanilla
+     * combat remains Minecraft's responsibility, while this method is called only
+     * from Magic Team's magic/addon interception points.
      */
     public static boolean shouldBlockFriendlyFire(Entity attacker, Entity target) {
         if (!isEnabled()) {
@@ -85,26 +87,11 @@ public class TeamUtils {
             return false;
         }
 
+        boolean sameResolvedEntity = rootAttacker == rootTarget;
         boolean allied = ENTITY_RELATIONS.areAllies(rootAttacker, rootTarget);
-        if (!allied) {
-            debugDecision(attacker, target, false, false, false);
-            return false;
-        }
+        boolean blocked = FriendlyFirePolicy.shouldBlock(sameResolvedEntity, allied);
 
-        Team attackerTeam = rootAttacker.getTeam();
-        Team targetTeam = rootTarget.getTeam();
-        boolean hasTeamRelation = attackerTeam != null
-                && targetTeam != null
-                && attackerTeam.isAlliedTo(targetTeam);
-        boolean friendlyFireAllowed = hasTeamRelation && attackerTeam.isAllowFriendlyFire();
-        boolean blocked = FriendlyFirePolicy.shouldBlock(
-                attacker == target,
-                allied,
-                hasTeamRelation,
-                friendlyFireAllowed
-        );
-
-        debugDecision(attacker, target, blocked, hasTeamRelation, friendlyFireAllowed);
+        debugDecision(attacker, target, blocked, allied, sameResolvedEntity);
         return blocked;
     }
 
@@ -304,18 +291,18 @@ public class TeamUtils {
     }
 
     private static void debugDecision(Entity attacker, Entity target, boolean blocked,
-                                      boolean hasTeamRelation, boolean friendlyFireAllowed) {
+                                      boolean allied, boolean sameResolvedEntity) {
         if (!debugEnabled) {
             return;
         }
 
         LOGGER.info(
-                "Magic Team decision: action={}, attacker={}, target={}, teamRelation={}, friendlyFire={}",
+                "Magic Team decision: action={}, attacker={}, target={}, allied={}, sameResolvedEntity={}",
                 blocked ? "BLOCKED" : "ALLOWED",
                 attacker.getScoreboardName(),
                 target.getScoreboardName(),
-                hasTeamRelation,
-                friendlyFireAllowed
+                allied,
+                sameResolvedEntity
         );
     }
 }
