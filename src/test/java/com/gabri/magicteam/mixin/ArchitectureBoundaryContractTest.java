@@ -128,6 +128,7 @@ public final class ArchitectureBoundaryContractTest {
     public static void main(String[] args) throws Exception {
         pseudoMixinsDoNotHardLinkOptionalAddons();
         allianceIdentityDoesNotDependOnFriendlyFire();
+        magicProtectionDoesNotDependOnVanillaFriendlyFire();
         optionalAddonMixinConfigsAreIsolated();
     }
 
@@ -165,6 +166,24 @@ public final class ArchitectureBoundaryContractTest {
                 "areAllies must remain relationship-only");
         check(areAllies.contains("ENTITY_RELATIONS.areAllies"),
                 "areAllies must delegate relationship identity to BabelEntityRelations");
+    }
+
+    private static void magicProtectionDoesNotDependOnVanillaFriendlyFire() throws IOException {
+        String source = Files.readString(TEAM_UTILS);
+        String signature = "public static boolean shouldBlockFriendlyFire(Entity attacker, Entity target)";
+        int start = source.indexOf(signature);
+        check(start >= 0, "TeamUtils.shouldBlockFriendlyFire was not found");
+
+        int nextMethod = source.indexOf("public static void sendBlockedMessage", start);
+        check(nextMethod > start, "could not isolate TeamUtils.shouldBlockFriendlyFire body");
+        String policy = source.substring(start, nextMethod);
+
+        check(!policy.contains("isAllowFriendlyFire"),
+                "Magic Team hostile-magic protection must ignore vanilla friendlyFire permission");
+        check(!policy.contains("getTeam()"),
+                "Magic Team hostile-magic protection must not inspect scoreboard teams for permission");
+        check(policy.contains("ENTITY_RELATIONS.areAllies"),
+                "Magic Team hostile-magic protection must still use Babel alliance identity");
     }
 
     private static void optionalAddonMixinConfigsAreIsolated() throws IOException {
