@@ -1,13 +1,11 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicTargetingPolicy;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
-import io.redspace.ironsspellbooks.capabilities.magic.TargetEntityCastData;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,7 +34,7 @@ public class AbstractSpellMixin {
                                                   int spellLevel,
                                                   LivingEntity entity,
                                                   MagicData magicData) {
-        if (magicTeam$cancelProtectedTarget(level, entity, magicData, spell)) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
             TeamUtils.sendBlockedMessage(entity);
             return;
         }
@@ -63,7 +61,7 @@ public class AbstractSpellMixin {
                                                LivingEntity entity,
                                                CastSource castSource,
                                                MagicData magicData) {
-        if (magicTeam$cancelProtectedTarget(level, entity, magicData, spell)) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
             TeamUtils.sendBlockedMessage(entity);
             return;
         }
@@ -84,7 +82,7 @@ public class AbstractSpellMixin {
     )
     private void onServerPreCastStart(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
-        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, playerMagicData, spell)) {
             TeamUtils.sendBlockedMessage(entity);
             ci.cancel();
             return;
@@ -109,7 +107,7 @@ public class AbstractSpellMixin {
     )
     private void onServerCastTickStart(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
-        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, playerMagicData, spell)) {
             TeamUtils.sendBlockedMessage(entity);
             ci.cancel();
             return;
@@ -134,7 +132,7 @@ public class AbstractSpellMixin {
     )
     private void onCastStart(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
-        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, playerMagicData, spell)) {
             TeamUtils.sendBlockedMessage(entity);
             ci.cancel();
             return;
@@ -149,24 +147,6 @@ public class AbstractSpellMixin {
     )
     private void onCastEnd(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData, CallbackInfo ci) {
         MagicTeamEffectContext.pop();
-    }
-
-    private static boolean magicTeam$cancelProtectedTarget(Level level,
-                                                            LivingEntity caster,
-                                                            MagicData magicData,
-                                                            AbstractSpell spell) {
-        if (!TeamUtils.isEnabled() || !TeamUtils.isHarmful(spell) || caster == null || magicData == null) {
-            return false;
-        }
-        if (!(level instanceof ServerLevel serverLevel)) {
-            return false;
-        }
-        if (!(magicData.getAdditionalCastData() instanceof TargetEntityCastData targetData)) {
-            return false;
-        }
-
-        Entity target = targetData.getTarget(serverLevel);
-        return target != null && TeamUtils.shouldBlockFriendlyFire(caster, target);
     }
 
     private static MagicTeamEffectContext.InteractionType magicTeam$interaction(AbstractSpell spell) {
