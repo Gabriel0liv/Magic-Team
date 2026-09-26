@@ -3,18 +3,18 @@ package com.gabri.magicteam.mixin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/**
- * Dependency-free architecture contract for the global-first friendly-fire model.
- *
- * <p>The contract deliberately checks source layout and registrations instead of
- * loading Minecraft classes, so it can run with plain javac/java.</p>
- */
+/** Dependency-free architecture contract for the global-first friendly-fire model. */
 public final class GlobalFirstArchitectureContractTest {
     private static final Path CORE_CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
-    private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
     private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
+    private static final Path EXCEPTION_AUDIT = Path.of("docs/audits/2026-09-26-global-first-adapter-migration.md");
+    private static final Pattern MIXIN_ENTRY = Pattern.compile("\\\"([^\\\"]+)\\\"");
 
     private static final List<Path> OPTIONAL_CONFIGS = List.of(
             Path.of("src/main/resources/magic_team.traveloptics.mixins.json"),
@@ -37,7 +37,7 @@ public final class GlobalFirstArchitectureContractTest {
         coreConfigKeepsSharedGlobalHooks();
         optionalConfigsRemainOptionalEnhancements();
         genericAttributionIsAddonNeutral();
-        spellSpecificAdaptersDeclareWhyTheyStillExist();
+        everyRemainingOptionalAdapterIsAuditedException();
     }
 
     private static void coreConfigKeepsSharedGlobalHooks() throws IOException {
@@ -46,6 +46,10 @@ public final class GlobalFirstArchitectureContractTest {
                 "AbstractSpellMixin",
                 "AbstractMagicProjectileMixin",
                 "AoeEntityMixin",
+                "EntityMagicAttributionMixin",
+                "MobEffectInstanceMagicAttributionMixin",
+                "EntityMagicSideEffectMixin",
+                "LivingEntityMagicSideEffectMixin",
                 "DamageSourcesMixin",
                 "LivingEntityMixin")) {
             check(core.contains("\"" + required + "\""),
@@ -67,12 +71,9 @@ public final class GlobalFirstArchitectureContractTest {
     }
 
     private static void genericAttributionIsAddonNeutral() throws IOException {
-        Path attribution = UTIL_ROOT.resolve("MagicAttribution.java");
-        Path index = UTIL_ROOT.resolve("MagicAttributionIndex.java");
-        check(Files.isRegularFile(attribution), "generic MagicAttribution is missing");
-        check(Files.isRegularFile(index), "generic MagicAttributionIndex is missing");
-
-        for (Path path : List.of(attribution, index)) {
+        for (String file : List.of("MagicAttribution.java", "MagicAttributionIndex.java", "MagicEffectAttributionIndex.java")) {
+            Path path = UTIL_ROOT.resolve(file);
+            check(Files.isRegularFile(path), "generic attribution component is missing: " + file);
             String source = Files.readString(path);
             for (String addonMarker : ADDON_MARKERS) {
                 check(!source.contains(addonMarker),
@@ -81,39 +82,37 @@ public final class GlobalFirstArchitectureContractTest {
         }
     }
 
-    private static void spellSpecificAdaptersDeclareWhyTheyStillExist() throws IOException {
-        Path compatRoot = MIXIN_ROOT.resolve("compat");
-        if (!Files.isDirectory(compatRoot)) {
-            return;
+    private static void everyRemainingOptionalAdapterIsAuditedException() throws IOException {
+        check(Files.isRegularFile(EXCEPTION_AUDIT), "global-first exception audit is missing");
+        String audit = Files.readString(EXCEPTION_AUDIT);
+        Set<String> adapters = new LinkedHashSet<>();
+
+        for (Path config : OPTIONAL_CONFIGS) {
+            adapters.addAll(readMixinRegistrations(Files.readString(config)));
         }
 
-        try (var paths = Files.walk(compatRoot)) {
-            for (Path path : paths.filter(candidate -> candidate.toString().endsWith(".java")).toList()) {
-                String source = Files.readString(path);
-                String fileName = path.getFileName().toString();
-
-                if (fileName.equals("OptionalAddonMixinPlugin.java")
-                        || fileName.equals("OptionalAddonMixinErrorHandler.java")) {
-                    continue;
-                }
-
-                if (!looksSpellSpecific(fileName)) {
-                    continue;
-                }
-
-                check(source.contains("GLOBAL_FIRST_EXCEPTION:"),
-                        "spell-specific adapter lacks global-first justification: " + path);
-            }
+        for (String adapter : adapters) {
+            check(audit.contains("`" + adapter + "`"),
+                    "registered optional adapter is missing from global-first audit: " + adapter);
+            check(audit.contains("GLOBAL_FIRST_EXCEPTION"),
+                    "global-first exception audit must use explicit exception marker");
         }
+
+        check(!audit.contains("`compat.traveloptics.OrbitalVoidFriendlyFireMixin` — **GLOBAL_FIRST_EXCEPTION:"),
+                "Orbital Void must remain removed rather than documented as a permanent exception");
     }
 
-    private static boolean looksSpellSpecific(String fileName) {
-        String lower = fileName.toLowerCase();
-        return lower.contains("spell")
-                || lower.contains("friendlyfire")
-                || lower.contains("targeting")
-                || lower.contains("context")
-                || lower.contains("attribution");
+    private static Set<String> readMixinRegistrations(String json) {
+        int marker = json.indexOf("\"mixins\"");
+        int open = json.indexOf('[', marker);
+        int close = json.indexOf(']', open);
+        check(marker >= 0 && open >= 0 && close > open, "could not locate mixins array");
+        Set<String> result = new LinkedHashSet<>();
+        Matcher matcher = MIXIN_ENTRY.matcher(json.substring(open + 1, close));
+        while (matcher.find()) {
+            result.add(matcher.group(1));
+        }
+        return result;
     }
 
     private static void check(boolean condition, String message) {
