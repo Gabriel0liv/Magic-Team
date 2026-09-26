@@ -2,6 +2,7 @@ package com.gabri.magicteam.mixin;
 
 import com.gabri.magicteam.util.MagicAttribution;
 import com.gabri.magicteam.util.MagicAttributionIndex;
+import com.gabri.magicteam.util.MagicEffectAttributionIndex;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.server.level.ServerLevel;
@@ -10,7 +11,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.function.BooleanSupplier;
 
 /**
  * Generic server boundary for magic entities that outlive their cast stack.
@@ -22,6 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(ServerLevel.class)
 public abstract class EntityMagicAttributionMixin {
+    private static final long CLEANUP_INTERVAL_TICKS = 200L;
 
     @Inject(
             method = "addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z",
@@ -69,5 +74,20 @@ public abstract class EntityMagicAttributionMixin {
         } finally {
             MagicTeamEffectContext.pop();
         }
+    }
+
+    @Inject(
+            method = "tick(Ljava/util/function/BooleanSupplier;)V",
+            at = @At("RETURN")
+    )
+    private void magicTeam$cleanupExpiredAttribution(BooleanSupplier hasTimeLeft, CallbackInfo ci) {
+        ServerLevel level = (ServerLevel) (Object) this;
+        long gameTime = level.getGameTime();
+        if (gameTime % CLEANUP_INTERVAL_TICKS != 0L) {
+            return;
+        }
+
+        MagicAttributionIndex.cleanup(gameTime);
+        MagicEffectAttributionIndex.cleanup(gameTime);
     }
 }
