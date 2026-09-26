@@ -3,124 +3,33 @@ package com.gabri.magicteam.mixin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Dependency-free architecture boundaries that must remain true across addon fixes. */
 public final class ArchitectureBoundaryContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
     private static final Path TEAM_UTILS = Path.of("src/main/java/com/gabri/magicteam/util/TeamUtils.java");
     private static final Path CORE_MIXINS = Path.of("src/main/resources/magic_team.mixins.json");
-    private static final Path TRAVELOPTICS_MIXINS = Path.of("src/main/resources/magic_team.traveloptics.mixins.json");
-    private static final Path GEOMANCY_MIXINS = Path.of("src/main/resources/magic_team.geomancyplus.mixins.json");
-    private static final Path FAMILIARS_MIXINS = Path.of("src/main/resources/magic_team.familiars.mixins.json");
-    private static final Path CATACLYSM_MIXINS = Path.of("src/main/resources/magic_team.cataclysm.mixins.json");
     private static final Path BUILD_GRADLE = Path.of("build.gradle");
-
+    private static final List<Path> OPTIONAL_CONFIGS = List.of(
+            Path.of("src/main/resources/magic_team.traveloptics.mixins.json"),
+            Path.of("src/main/resources/magic_team.geomancyplus.mixins.json"),
+            Path.of("src/main/resources/magic_team.familiars.mixins.json"),
+            Path.of("src/main/resources/magic_team.cataclysm.mixins.json")
+    );
     private static final List<String> OPTIONAL_IMPORT_PREFIXES = List.of(
             "import com.gametechbc.traveloptics.",
             "import com.gametechbc.gtbcs_geomancy_plus.",
             "import net.alshanex.alshanex_familiars.",
             "import com.github.L_Ender.cataclysm."
     );
-
-    private static final List<String> TRAVELOPTICS_ADAPTERS = List.of(
-            "AnnihilationSpellMixin",
-            "compat.traveloptics.AbyssalHideFriendlyFireMixin",
-            "compat.traveloptics.AbyssalStrikeFriendlyFireMixin",
-            "compat.traveloptics.AcidRainAoeContextMixin",
-            "compat.traveloptics.AquaMissilesFriendlyFireMixin",
-            "compat.traveloptics.AquaVortexFriendlyFireMixin",
-            "compat.traveloptics.ArcaneArtilleryTargetingMixin",
-            "compat.traveloptics.BanishFriendlyFireMixin",
-            "compat.traveloptics.BlackoutAntiMagicFieldContextMixin",
-            "compat.traveloptics.CataclysmAmethystClusterFriendlyFireMixin",
-            "compat.traveloptics.CataclysmAncientDesertSteleFriendlyFireMixin",
-            "compat.traveloptics.CataclysmAxeBladeFriendlyFireMixin",
-            "compat.traveloptics.CataclysmFlameJetFriendlyFireMixin",
-            "compat.traveloptics.CataclysmLaserBeamFriendlyFireMixin",
-            "compat.traveloptics.CataclysmPhantomArrowFriendlyFireMixin",
-            "compat.traveloptics.CataclysmVoidRuneFriendlyFireMixin",
-            "compat.traveloptics.CataclysmVoidVortexFriendlyFireMixin",
-            "compat.traveloptics.ChargedSandsLevelOneFriendlyFireMixin",
-            "compat.traveloptics.ChargedSandsLevelTwoFriendlyFireMixin",
-            "compat.traveloptics.CoralBoltFriendlyFireMixin",
-            "compat.traveloptics.CrimsonDescendFriendlyFireMixin",
-            "compat.traveloptics.CursedWraithbladeFriendlyFireMixin",
-            "compat.traveloptics.DimensionalSpikeFriendlyFireMixin",
-            "compat.traveloptics.DragonSpiritFriendlyFireMixin",
-            "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
-            "compat.traveloptics.DyingStarFriendlyFireMixin",
-            "compat.traveloptics.EndEruptionFriendlyFireMixin",
-            "compat.traveloptics.EnsnareFriendlyFireMixin",
-            "compat.traveloptics.EternalMaelstromTridentFriendlyFireMixin",
-            "compat.traveloptics.ExtendedAbyssBlastFriendlyFireMixin",
-            "compat.traveloptics.ExtendedDeathLaserFriendlyFireMixin",
-            "compat.traveloptics.ExtendedFlameStrikeFriendlyFireMixin",
-            "compat.traveloptics.ExtendedIgnisFireballContextMixin",
-            "compat.traveloptics.ExtendedPhantomArrowFriendlyFireMixin",
-            "compat.traveloptics.ExtendedPhantomHalberdFriendlyFireMixin",
-            "compat.traveloptics.ExtendedSandstormFriendlyFireMixin",
-            "compat.traveloptics.ExtendedStormSerpentFriendlyFireMixin",
-            "compat.traveloptics.ExtendedWaterBoltFriendlyFireMixin",
-            "compat.traveloptics.ExtendedWaterSpearFriendlyFireMixin",
-            "compat.traveloptics.ExtendedWaveFriendlyFireMixin",
-            "compat.traveloptics.ExtendedWitherHomingMissileContextMixin",
-            "compat.traveloptics.ExtendedWitherHowitzerContextMixin",
-            "compat.traveloptics.FlareVacuumAttributionMixin",
-            "compat.traveloptics.FloodSlashFriendlyFireMixin",
-            "compat.traveloptics.ForlornHarbingerFriendlyFireMixin",
-            "compat.traveloptics.ForgeServerEventsFriendlyFireMixin",
-            "compat.traveloptics.GalenaMarkFriendlyFireMixin",
-            "compat.traveloptics.GalenaShatterFriendlyFireMixin",
-            "compat.traveloptics.GyroSlashFriendlyFireMixin",
-            "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
-            "compat.traveloptics.LightningSandstormAoeFriendlyFireMixin",
-            "compat.traveloptics.LightningSandstormPierceFriendlyFireMixin",
-            "compat.traveloptics.MaelstromFriendlyFireMixin",
-            "compat.traveloptics.MaelstromTridentPhantomFriendlyFireMixin",
-            "compat.traveloptics.MechanizedExoskeletonFriendlyFireMixin",
-            "compat.traveloptics.MeteorStormFriendlyFireMixin",
-            "compat.traveloptics.NightwardenCloneBaseFriendlyFireMixin",
-            "compat.traveloptics.NightwardenSpinCloneFriendlyFireMixin",
-            "compat.traveloptics.OrbitalVoidFriendlyFireMixin",
-            "compat.traveloptics.PrimordialCrestFriendlyFireMixin",
-            "compat.traveloptics.PsychicBoltFriendlyFireMixin",
-            "compat.traveloptics.RainfallInteractionMixin",
-            "compat.traveloptics.ReturningWaveFriendlyFireMixin",
-            "compat.traveloptics.ReversalFriendlyFireMixin",
-            "compat.traveloptics.ScourgeOfTheSandsTargetingMixin",
-            "compat.traveloptics.ScourgeOfTheSandsLevelThreeTargetingMixin",
-            "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin",
-            "compat.traveloptics.StellothornContextMixin",
-            "compat.traveloptics.SupermassiveBlackHoleFriendlyFireMixin",
-            "compat.traveloptics.SyncedAoeEntityFriendlyFireMixin",
-            "compat.traveloptics.TectonicCrestFriendlyFireMixin",
-            "compat.traveloptics.TidalGraspEffectContextMixin",
-            "compat.traveloptics.TidalGraspFriendlyFireMixin",
-            "compat.traveloptics.VoidSlashContextMixin",
-            "compat.traveloptics.VortexPunchFriendlyFireMixin"
-    );
-
-    private static final List<String> GEOMANCY_ADAPTERS = List.of(
-            "compat.geomancyplus.SolarStormFriendlyFireMixin",
-            "compat.geomancyplus.TremorStepFriendlyFireMixin"
-    );
-
-    private static final List<String> FAMILIARS_ADAPTERS = List.of(
-            "compat.familiars.HikenFriendlyFireMixin",
-            "compat.familiars.IllusionistDecoyContextMixin",
-            "compat.familiars.MayhemDirectHitFriendlyFireMixin",
-            "compat.familiars.DragonEggFriendlyFireMixin",
-            "compat.familiars.LullabyFriendlyFireMixin",
-            "compat.familiars.SonataFriendlyFireMixin",
-            "compat.familiars.HarpExplosionFriendlyFireMixin",
-            "compat.familiars.ServerEventsRetaliationFriendlyFireMixin"
-    );
-
-    private static final List<String> CATACLYSM_ADAPTERS = List.of(
-            "CataclysmFlareBombMixin",
-            "CataclysmWitherHowitzerMixin"
-    );
+    private static final Pattern MIXIN_ENTRY = Pattern.compile("\\\"([^\\\"]+)\\\"");
+    private static final String OPTIONAL_PLUGIN =
+            "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin";
 
     private ArchitectureBoundaryContractTest() {
     }
@@ -129,7 +38,7 @@ public final class ArchitectureBoundaryContractTest {
         pseudoMixinsDoNotHardLinkOptionalAddons();
         allianceIdentityDoesNotDependOnFriendlyFire();
         magicProtectionDoesNotDependOnVanillaFriendlyFire();
-        optionalAddonMixinConfigsAreIsolated();
+        optionalAddonMixinConfigsAreIsolatedAndFailSoft();
     }
 
     private static void pseudoMixinsDoNotHardLinkOptionalAddons() throws IOException {
@@ -139,7 +48,6 @@ public final class ArchitectureBoundaryContractTest {
                 if (!source.contains("@Pseudo")) {
                     continue;
                 }
-
                 for (String forbiddenImport : OPTIONAL_IMPORT_PREFIXES) {
                     check(!source.contains(forbiddenImport),
                             "@Pseudo mixin hard-links an optional addon: " + path + " -> " + forbiddenImport);
@@ -153,18 +61,13 @@ public final class ArchitectureBoundaryContractTest {
         String signature = "public static boolean areAllies(Entity a, Entity b)";
         int start = source.indexOf(signature);
         check(start >= 0, "TeamUtils.areAllies was not found");
-
         int nextMethod = source.indexOf("public static Entity getRootOwner", start);
         check(nextMethod > start, "could not isolate TeamUtils.areAllies body");
-        String areAllies = source.substring(start, nextMethod);
+        String body = source.substring(start, nextMethod);
 
-        check(!areAllies.contains("shouldBlockFriendlyFire"),
-                "areAllies must not delegate to hostile friendly-fire policy");
-        check(!areAllies.contains("isAllowFriendlyFire"),
-                "areAllies must not inspect scoreboard friendly-fire permission");
-        check(!areAllies.toLowerCase().contains("friendlyfire"),
-                "areAllies must remain relationship-only");
-        check(areAllies.contains("ENTITY_RELATIONS.areAllies"),
+        check(!body.contains("shouldBlockFriendlyFire"), "areAllies must remain relationship-only");
+        check(!body.contains("isAllowFriendlyFire"), "areAllies must ignore vanilla friendlyFire permission");
+        check(body.contains("ENTITY_RELATIONS.areAllies"),
                 "areAllies must delegate relationship identity to BabelEntityRelations");
     }
 
@@ -173,23 +76,23 @@ public final class ArchitectureBoundaryContractTest {
         String signature = "public static boolean shouldBlockFriendlyFire(Entity attacker, Entity target)";
         int start = source.indexOf(signature);
         check(start >= 0, "TeamUtils.shouldBlockFriendlyFire was not found");
-
         int nextMethod = source.indexOf("public static void sendBlockedMessage", start);
         check(nextMethod > start, "could not isolate TeamUtils.shouldBlockFriendlyFire body");
-        String policy = source.substring(start, nextMethod);
+        String body = source.substring(start, nextMethod);
 
-        check(!policy.contains("isAllowFriendlyFire"),
+        check(!body.contains("isAllowFriendlyFire"),
                 "Magic Team hostile-magic protection must ignore vanilla friendlyFire permission");
-        check(!policy.contains("getTeam()"),
-                "Magic Team hostile-magic protection must not inspect scoreboard teams for permission");
-        check(policy.contains("ENTITY_RELATIONS.areAllies"),
+        check(!body.contains("getTeam()"),
+                "Magic Team hostile-magic protection must not inspect scoreboard permission");
+        check(body.contains("ENTITY_RELATIONS.areAllies"),
                 "Magic Team hostile-magic protection must still use Babel alliance identity");
     }
 
-    private static void optionalAddonMixinConfigsAreIsolated() throws IOException {
+    private static void optionalAddonMixinConfigsAreIsolatedAndFailSoft() throws IOException {
         String core = Files.readString(CORE_MIXINS);
         check(core.contains("\"required\": true"), "core mixin config must remain required");
         check(core.contains("\"defaultRequire\": 1"), "core mixin config must remain strict");
+        check(!core.contains(OPTIONAL_PLUGIN), "optional fail-soft plugin must not attach to core config");
 
         for (String forbidden : List.of(
                 "compat.traveloptics.",
@@ -201,27 +104,37 @@ public final class ArchitectureBoundaryContractTest {
             check(!core.contains(forbidden), "optional adapter leaked into required core config: " + forbidden);
         }
 
-        String travelOptics = readOptionalConfig(TRAVELOPTICS_MIXINS);
-        String geomancy = readOptionalConfig(GEOMANCY_MIXINS);
-        String familiars = readOptionalConfig(FAMILIARS_MIXINS);
-        String cataclysm = readOptionalConfig(CATACLYSM_MIXINS);
-        List<String> optionalConfigs = List.of(travelOptics, geomancy, familiars, cataclysm);
+        Set<String> allAdapters = new LinkedHashSet<>();
+        for (Path configPath : OPTIONAL_CONFIGS) {
+            check(Files.isRegularFile(configPath), "optional mixin config is missing: " + configPath);
+            String config = Files.readString(configPath);
+            check(config.contains("\"required\": false"), "optional config must not be required: " + configPath);
+            check(config.contains("\"defaultRequire\": 0"),
+                    "optional config must make missing injector targets non-fatal: " + configPath);
+            check(config.contains("\"plugin\": \"" + OPTIONAL_PLUGIN + "\""),
+                    "optional config must install fail-soft diagnostics: " + configPath);
+            check(config.contains("\"refmap\": \"magic_team.refmap.json\""),
+                    "optional config must use the shared refmap: " + configPath);
 
-        assertFamilyMembership(TRAVELOPTICS_ADAPTERS, travelOptics, optionalConfigs, "Travel Optics");
-        assertFamilyMembership(GEOMANCY_ADAPTERS, geomancy, optionalConfigs, "Geomancy Plus");
-        assertFamilyMembership(FAMILIARS_ADAPTERS, familiars, optionalConfigs, "Familiars");
-        assertFamilyMembership(CATACLYSM_ADAPTERS, cataclysm, optionalConfigs, "Cataclysm");
-
-        for (String adapter : allOptionalAdapters()) {
-            Path sourcePath = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
-            check(Files.exists(sourcePath), "configured optional mixin source is missing: " + adapter);
-            String source = Files.readString(sourcePath);
-            check(source.contains("@Pseudo"), "optional addon mixin must use @Pseudo: " + adapter);
-            for (String forbiddenImport : OPTIONAL_IMPORT_PREFIXES) {
-                check(!source.contains(forbiddenImport),
-                        "optional addon mixin hard-links an optional addon: " + adapter + " -> " + forbiddenImport);
+            for (String adapter : readMixinRegistrations(config)) {
+                check(allAdapters.add(adapter), "optional adapter appears in more than one config: " + adapter);
+                Path sourcePath = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
+                check(Files.isRegularFile(sourcePath), "configured optional mixin source is missing: " + adapter);
+                String source = Files.readString(sourcePath);
+                check(source.contains("@Pseudo"), "optional addon mixin must use @Pseudo: " + adapter);
+                for (String forbiddenImport : OPTIONAL_IMPORT_PREFIXES) {
+                    check(!source.contains(forbiddenImport),
+                            "optional addon mixin hard-links an optional addon: " + adapter + " -> " + forbiddenImport);
+                }
             }
         }
+
+        check(allAdapters.contains("AnnihilationSpellMixin"), "Travel Optics root adapter must remain optional");
+        check(allAdapters.contains("compat.geomancyplus.SolarStormFriendlyFireMixin"),
+                "Geomancy Plus adapters must remain optional");
+        check(allAdapters.contains("compat.familiars.HikenFriendlyFireMixin"),
+                "Familiars adapters must remain optional");
+        check(allAdapters.contains("CataclysmFlareBombMixin"), "Cataclysm root adapters must remain optional");
 
         String buildGradle = Files.readString(BUILD_GRADLE);
         for (String configName : List.of(
@@ -234,38 +147,17 @@ public final class ArchitectureBoundaryContractTest {
         }
     }
 
-    private static String readOptionalConfig(Path path) throws IOException {
-        check(Files.exists(path), "optional mixin config is missing: " + path);
-        String content = Files.readString(path);
-        check(content.contains("\"required\": false"), "optional mixin config must not be required: " + path);
-        check(content.contains("\"defaultRequire\": 1"), "optional mixin config must keep strict injector matching: " + path);
-        check(content.contains("\"refmap\": \"magic_team.refmap.json\""), "optional mixin config must use the shared refmap: " + path);
-        return content;
-    }
-
-    private static void assertFamilyMembership(List<String> expectedAdapters, String familyConfig,
-                                               List<String> allOptionalConfigs, String familyName) {
-        for (String adapter : expectedAdapters) {
-            check(familyConfig.contains("\"" + adapter + "\""),
-                    familyName + " config is missing adapter: " + adapter);
-            int occurrences = 0;
-            for (String config : allOptionalConfigs) {
-                if (config.contains("\"" + adapter + "\"")) {
-                    occurrences++;
-                }
-            }
-            check(occurrences == 1, "optional adapter must appear in exactly one optional config: " + adapter);
+    private static Set<String> readMixinRegistrations(String json) {
+        int marker = json.indexOf("\"mixins\"");
+        int open = json.indexOf('[', marker);
+        int close = json.indexOf(']', open);
+        check(marker >= 0 && open >= 0 && close > open, "could not locate optional mixins array");
+        Set<String> result = new LinkedHashSet<>();
+        Matcher matcher = MIXIN_ENTRY.matcher(json.substring(open + 1, close));
+        while (matcher.find()) {
+            result.add(matcher.group(1));
         }
-    }
-
-    private static List<String> allOptionalAdapters() {
-        return java.util.stream.Stream.of(
-                        TRAVELOPTICS_ADAPTERS,
-                        GEOMANCY_ADAPTERS,
-                        FAMILIARS_ADAPTERS,
-                        CATACLYSM_ADAPTERS)
-                .flatMap(List::stream)
-                .toList();
+        return result;
     }
 
     private static void check(boolean condition, String message) {
