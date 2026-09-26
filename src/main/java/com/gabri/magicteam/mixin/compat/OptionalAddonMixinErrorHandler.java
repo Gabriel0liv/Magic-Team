@@ -6,27 +6,30 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
-import java.util.Set;
-
 /**
- * Keeps optional addon compatibility failures from becoming server-wide
- * startup failures. Core Magic Team mixins are deliberately excluded.
+ * Fail-soft diagnostics for the small optional compatibility layer.
+ *
+ * <p>Prepare-time failure can safely skip an optional adapter. Apply-time
+ * failure may occur after target transformation has started, so Magic Team logs
+ * the degradation but preserves Mixin's original action instead of forcing WARN
+ * and risking a partially transformed class.</p>
  */
 public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger("MagicTeam/OptionalAdapters");
     private static final String MIXIN_PREFIX = "com.gabri.magicteam.mixin.";
-    private static final Set<String> OPTIONAL_ROOT_MIXINS = Set.of(
-            MIXIN_PREFIX + "AnnihilationSpellMixin",
-            MIXIN_PREFIX + "CataclysmFlareBombMixin",
-            MIXIN_PREFIX + "CataclysmWitherHowitzerMixin"
-    );
 
     @Override
     public ErrorAction onPrepareError(IMixinConfig config,
                                       Throwable throwable,
                                       IMixinInfo mixin,
                                       ErrorAction action) {
-        return handleOptionalFailure(null, throwable, mixin, action);
+        String mixinName = mixin == null ? null : mixin.getClassName();
+        if (!isOptionalMixin(mixinName)) {
+            return action;
+        }
+
+        logDegradation("prepare", null, throwable, mixinName, ErrorAction.WARN);
+        return ErrorAction.WARN;
     }
 
     @Override
@@ -34,29 +37,31 @@ public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler 
                                     Throwable throwable,
                                     IMixinInfo mixin,
                                     ErrorAction action) {
-        return handleOptionalFailure(targetClassName, throwable, mixin, action);
-    }
-
-    private static ErrorAction handleOptionalFailure(String targetClassName,
-                                                     Throwable throwable,
-                                                     IMixinInfo mixin,
-                                                     ErrorAction action) {
         String mixinName = mixin == null ? null : mixin.getClassName();
         if (!isOptionalMixin(mixinName)) {
             return action;
         }
 
-        String family = familyFor(mixinName);
+        logDegradation("apply", targetClassName, throwable, mixinName, action);
+        return action;
+    }
+
+    private static void logDegradation(String phase,
+                                       String targetClassName,
+                                       Throwable throwable,
+                                       String mixinName,
+                                       ErrorAction resultingAction) {
         LOGGER.warn(
-                "Magic Team optional adapter degraded: family={}, adapter={}, target={}. "
-                        + "The adapter-specific protection was skipped; generic Magic Team protection "
+                "Magic Team optional adapter degraded: phase={}, family={}, adapter={}, target={}, action={}. "
+                        + "Only adapter-specific compatibility is affected; generic Magic Team protection "
                         + "continues where applicable and addon-native fallback remains in effect. Cause: {}",
-                family,
+                phase,
+                familyFor(mixinName),
                 mixinName,
                 targetClassName == null ? "<prepare>" : targetClassName,
+                resultingAction,
                 throwable == null ? "unknown" : throwable.toString()
         );
-        return ErrorAction.WARN;
     }
 
     static boolean isOptionalMixin(String mixinName) {
@@ -65,16 +70,14 @@ public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler 
         }
         return mixinName.startsWith(MIXIN_PREFIX + "compat.traveloptics.")
                 || mixinName.startsWith(MIXIN_PREFIX + "compat.geomancyplus.")
-                || mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.")
-                || OPTIONAL_ROOT_MIXINS.contains(mixinName);
+                || mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.");
     }
 
     private static String familyFor(String mixinName) {
         if (mixinName == null) {
             return "unknown";
         }
-        if (mixinName.startsWith(MIXIN_PREFIX + "compat.traveloptics.")
-                || mixinName.endsWith("AnnihilationSpellMixin")) {
+        if (mixinName.startsWith(MIXIN_PREFIX + "compat.traveloptics.")) {
             return "Travel Optics";
         }
         if (mixinName.startsWith(MIXIN_PREFIX + "compat.geomancyplus.")) {
@@ -82,10 +85,6 @@ public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler 
         }
         if (mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.")) {
             return "Alshanex Familiars";
-        }
-        if (mixinName.endsWith("CataclysmFlareBombMixin")
-                || mixinName.endsWith("CataclysmWitherHowitzerMixin")) {
-            return "Cataclysm";
         }
         return "optional addon";
     }
