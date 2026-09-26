@@ -151,8 +151,8 @@ public final class MixinWiringContractTest {
                 "Galena Mark must recheck friendly fire before the delayed magnetic blast");
         check(markSource.contains("method = \"m_8119_()V\""),
                 "Galena Mark must recheck friendly fire during damage ticks");
-        check(markSource.contains("require = 2"),
-                "Galena Mark must gate both pull and push movement writes");
+        check(markSource.contains("target = \"Lnet/minecraft/world/entity/Entity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V\""),
+                "Galena Mark must retain the pull/push movement interception while its match count stays fail-soft");
     }
 
     private static void tidalGraspUsesHostileContextForDelayedEffects() throws IOException {
