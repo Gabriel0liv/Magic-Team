@@ -217,7 +217,10 @@ public class TeamUtils {
             return true;
         }
 
-        if (isVanillaPotionSource(source)) {
+        // A plain vanilla potion/cloud remains outside Magic Team. If the same
+        // vanilla entity was spawned by an attributed spell, however, the
+        // attribution is positive evidence that it belongs to the magic path.
+        if (isVanillaPotionSource(source) && attribution == null) {
             return true;
         }
 
