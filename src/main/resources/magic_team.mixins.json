@@ -10,6 +10,7 @@
     "AbstractSpellCastingMobDispatchMixin",
     "AoeEntityMixin",
     "EntityMixin",
+    "EntityMagicAttributionMixin",
     "AreaEffectCloudMixin",
     "ThrownPotionMixin",
     "PoisonCloudMixin",
