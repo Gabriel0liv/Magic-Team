@@ -66,7 +66,6 @@ public abstract class GalenaMarkFriendlyFireMixin {
                     target = "Lnet/minecraft/world/entity/Entity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V",
                     remap = false
             ),
-            require = 2,
             remap = false
     )
     private void magicTeam$gateMagneticMovement(Entity target, Vec3 movement) {
