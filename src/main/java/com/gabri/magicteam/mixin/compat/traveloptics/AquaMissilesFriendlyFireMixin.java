@@ -17,7 +17,7 @@ public abstract class AquaMissilesFriendlyFireMixin {
     @Redirect(
             method = "getRandomlyLookingAtEntityFor(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;D)Lnet/minecraft/world/entity/Entity;",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z", remap = false),
-            require = 2,
+            require = 1,
             remap = false
     )
     private static boolean magicTeam$useFriendlyFireForRandomTarget(Entity source, Entity target) {
