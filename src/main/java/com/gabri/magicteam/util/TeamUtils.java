@@ -3,6 +3,7 @@ package com.gabri.magicteam.util;
 import com.gabri.babel.core.gameplay.entity.BabelEntityRelations;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.AreaEffectCloud;
@@ -165,15 +166,45 @@ public class TeamUtils {
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance) {
-        return shouldAllowEffect(source, target, effectInstance, null, MagicTeamEffectContext.InteractionType.GENERIC);
+        return shouldAllowEffect(
+                source,
+                target,
+                effectInstance,
+                null,
+                MagicTeamEffectContext.currentAttribution(),
+                MagicTeamEffectContext.getInteractionType()
+        );
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance, AbstractSpell spell) {
-        return shouldAllowEffect(source, target, effectInstance, spell, MagicTeamEffectContext.InteractionType.GENERIC);
+        return shouldAllowEffect(
+                source,
+                target,
+                effectInstance,
+                spell,
+                MagicTeamEffectContext.currentAttribution(),
+                MagicTeamEffectContext.getInteractionType()
+        );
     }
 
     public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance,
                                             AbstractSpell spell, MagicTeamEffectContext.InteractionType interactionType) {
+        return shouldAllowEffect(
+                source,
+                target,
+                effectInstance,
+                spell,
+                MagicTeamEffectContext.currentAttribution(),
+                interactionType
+        );
+    }
+
+    public static boolean shouldAllowEffect(Entity source,
+                                            Entity target,
+                                            MobEffectInstance effectInstance,
+                                            AbstractSpell spell,
+                                            MagicAttribution attribution,
+                                            MagicTeamEffectContext.InteractionType interactionType) {
         if (!isEnabled()) {
             return true;
         }
@@ -190,39 +221,112 @@ public class TeamUtils {
             return true;
         }
 
-        SpellBehavior explicitOverride = spell == null ? null : getSpellOverride(spell.getSpellId());
-        if (explicitOverride != null && (source == target || areAllies(source, target))) {
-            return explicitOverride == SpellBehavior.SUPPORT || !shouldBlockFriendlyFire(source, target);
+        SpellBehavior behavior = resolveMagicBehavior(spell, attribution, interactionType);
+        if (behavior == null) {
+            return true;
         }
 
-        MagicTeamEffectContext.InteractionType effectiveType = interactionType == null
-                ? MagicTeamEffectContext.InteractionType.GENERIC
-                : interactionType;
-
-        if (effectiveType == MagicTeamEffectContext.InteractionType.BENEFICIAL) {
-            return source == target || areAllies(source, target);
+        Entity effectiveSource = resolveMagicSource(source, attribution);
+        if (effectiveSource == null) {
+            return true;
         }
 
-        if (effectiveType == MagicTeamEffectContext.InteractionType.HARMFUL) {
-            return !shouldBlockFriendlyFire(source, target);
+        if (behavior == SpellBehavior.SUPPORT) {
+            return effectiveSource == target || areAllies(effectiveSource, target);
         }
 
-        if (effectInstance.getEffect().isBeneficial()) {
-            return source == target || areAllies(source, target);
-        }
-
-        return !shouldBlockFriendlyFire(source, target);
+        return !shouldBlockFriendlyFire(effectiveSource, target);
     }
 
     public static boolean shouldBlockMagicDamage(Entity attacker, Entity target) {
-        return shouldBlockMagicDamage(attacker, target, null);
+        return shouldBlockMagicDamage(
+                attacker,
+                target,
+                null,
+                MagicTeamEffectContext.currentAttribution(),
+                MagicTeamEffectContext.getInteractionType()
+        );
     }
 
     public static boolean shouldBlockMagicDamage(Entity attacker, Entity target, AbstractSpell spell) {
-        if (spell != null && getSpellBehavior(spell) == SpellBehavior.SUPPORT) {
+        return shouldBlockMagicDamage(
+                attacker,
+                target,
+                spell,
+                MagicTeamEffectContext.currentAttribution(),
+                MagicTeamEffectContext.getInteractionType()
+        );
+    }
+
+    public static boolean shouldBlockMagicDamage(Entity attacker,
+                                                 Entity target,
+                                                 AbstractSpell spell,
+                                                 MagicAttribution attribution,
+                                                 MagicTeamEffectContext.InteractionType interactionType) {
+        if (!isEnabled() || attacker == null || target == null) {
             return false;
         }
-        return shouldBlockFriendlyFire(attacker, target);
+
+        SpellBehavior behavior = resolveMagicBehavior(spell, attribution, interactionType);
+        if (behavior == null || behavior == SpellBehavior.SUPPORT) {
+            return false;
+        }
+
+        Entity effectiveAttacker = resolveMagicSource(attacker, attribution);
+        return effectiveAttacker != null && shouldBlockFriendlyFire(effectiveAttacker, target);
+    }
+
+    /**
+     * Resolves the effective spell behavior from the strongest available magic evidence.
+     * Returning null means Magic Team has no proof that the interaction is magic and
+     * therefore must leave original gameplay untouched.
+     */
+    public static SpellBehavior resolveMagicBehavior(AbstractSpell spell,
+                                                     MagicAttribution attribution,
+                                                     MagicTeamEffectContext.InteractionType interactionType) {
+        if (spell != null) {
+            return getSpellBehavior(spell);
+        }
+
+        if (attribution != null) {
+            SpellBehavior currentOverride = getSpellOverride(attribution.spellId());
+            return currentOverride != null ? currentOverride : attribution.behavior();
+        }
+
+        if (interactionType == MagicTeamEffectContext.InteractionType.HARMFUL) {
+            return SpellBehavior.HOSTILE;
+        }
+
+        if (interactionType == MagicTeamEffectContext.InteractionType.BENEFICIAL) {
+            return SpellBehavior.SUPPORT;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves the original/root caster from persistent attribution when possible,
+     * then falls back to Babel's live root-owner relationship for the interaction entity.
+     */
+    public static Entity resolveMagicSource(Entity interactionSource, MagicAttribution attribution) {
+        if (interactionSource == null) {
+            return null;
+        }
+
+        if (attribution != null && interactionSource.level() instanceof ServerLevel serverLevel) {
+            Entity rootCaster = serverLevel.getEntity(attribution.rootCasterId());
+            if (rootCaster != null) {
+                return rootCaster;
+            }
+
+            Entity originalSource = serverLevel.getEntity(attribution.sourceEntityId());
+            if (originalSource != null) {
+                Entity root = getRootOwner(originalSource);
+                return root != null ? root : originalSource;
+            }
+        }
+
+        return resolveComparisonEntity(interactionSource);
     }
 
     public static SpellBehavior getDefaultSpellBehavior(AbstractSpell spell) {
