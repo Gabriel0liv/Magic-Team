@@ -5,6 +5,9 @@ import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
+import io.redspace.ironsspellbooks.capabilities.magic.TargetEntityCastData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -66,10 +69,17 @@ public class AbstractSpellMixin {
     /* Fallback scopes for direct/base-hook invocations outside the normal dispatchers. */
     @Inject(
             method = "onServerPreCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
-            at = @At("HEAD")
+            at = @At("HEAD"),
+            cancellable = true
     )
     private void onServerPreCastStart(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
+        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            ci.cancel();
+            return;
+        }
+
         CastSource castSource = playerMagicData == null ? null : playerMagicData.getCastSource();
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
     }
@@ -84,10 +94,17 @@ public class AbstractSpellMixin {
 
     @Inject(
             method = "onServerCastTick(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
-            at = @At("HEAD")
+            at = @At("HEAD"),
+            cancellable = true
     )
     private void onServerCastTickStart(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
+        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            ci.cancel();
+            return;
+        }
+
         CastSource castSource = playerMagicData == null ? null : playerMagicData.getCastSource();
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
     }
@@ -102,10 +119,17 @@ public class AbstractSpellMixin {
 
     @Inject(
             method = "onCast(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/spells/CastSource;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V",
-            at = @At("HEAD")
+            at = @At("HEAD"),
+            cancellable = true
     )
     private void onCastStart(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData, CallbackInfo ci) {
         AbstractSpell spell = (AbstractSpell) (Object) this;
+        if (magicTeam$cancelProtectedTarget(level, entity, playerMagicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            ci.cancel();
+            return;
+        }
+
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
     }
 
@@ -115,6 +139,24 @@ public class AbstractSpellMixin {
     )
     private void onCastEnd(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData, CallbackInfo ci) {
         MagicTeamEffectContext.pop();
+    }
+
+    private static boolean magicTeam$cancelProtectedTarget(Level level,
+                                                            LivingEntity caster,
+                                                            MagicData magicData,
+                                                            AbstractSpell spell) {
+        if (!TeamUtils.isEnabled() || !TeamUtils.isHarmful(spell) || caster == null || magicData == null) {
+            return false;
+        }
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+        if (!(magicData.getAdditionalCastData() instanceof TargetEntityCastData targetData)) {
+            return false;
+        }
+
+        Entity target = targetData.getTarget(serverLevel);
+        return target != null && TeamUtils.shouldBlockFriendlyFire(caster, target);
     }
 
     private static MagicTeamEffectContext.InteractionType magicTeam$interaction(AbstractSpell spell) {
