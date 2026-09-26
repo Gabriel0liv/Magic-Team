@@ -38,7 +38,14 @@ public final class CommandConfigContractTest {
         check(commands.contains("Commands.literal(\"message\")"), "missing message command root");
         check(commands.contains("Commands.literal(\"debug\")"), "missing debug toggle");
         check(commands.contains("Commands.literal(\"targetnotification\")"),
-                "missing /magicteam targetnotification enabled <true|false>");
+                "missing /magicteam targetnotification <true|false>");
+        String targetNotificationCommand = isolate(commands,
+                "Commands.literal(\"targetnotification\")",
+                ".then(Commands.literal(\"message\")");
+        check(targetNotificationCommand.contains("Commands.argument(\"value\", BoolArgumentType.bool())"),
+                "targetnotification must accept the boolean directly");
+        check(!targetNotificationCommand.contains("Commands.literal(\"enabled\")"),
+                "targetnotification must not require a redundant enabled subcommand");
         check(commands.contains("Notificação de alvo:"),
                 "/magicteam status must expose the target-notification state");
         check(!commands.contains("Commands.literal(\"filter\")"), "legacy filter command must be removed");
