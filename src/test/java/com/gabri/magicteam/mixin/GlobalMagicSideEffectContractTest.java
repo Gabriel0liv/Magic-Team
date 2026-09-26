@@ -7,7 +7,7 @@ import java.nio.file.Path;
 public final class GlobalMagicSideEffectContractTest {
     private static final Path ENTITY = Path.of("src/main/java/com/gabri/magicteam/mixin/EntityMagicSideEffectMixin.java");
     private static final Path LIVING = Path.of("src/main/java/com/gabri/magicteam/mixin/LivingEntityMagicSideEffectMixin.java");
-    private static final Path TEAM_UTILS = Path.of("src/main/java/com/gabri/magicteam/util/TeamUtils.java");
+    private static final Path POLICY = Path.of("src/main/java/com/gabri/magicteam/util/MagicSideEffectPolicy.java");
     private static final Path CONFIG = Path.of("src/main/resources/magic_team.mixins.json");
 
     private GlobalMagicSideEffectContractTest() {
@@ -16,14 +16,17 @@ public final class GlobalMagicSideEffectContractTest {
     public static void main(String[] args) throws Exception {
         check(Files.isRegularFile(ENTITY), "global Entity magic side-effect hook is missing");
         check(Files.isRegularFile(LIVING), "global LivingEntity magic side-effect hook is missing");
+        check(Files.isRegularFile(POLICY), "shared magic side-effect policy is missing");
 
         String entity = Files.readString(ENTITY);
         String living = Files.readString(LIVING);
-        String teamUtils = Files.readString(TEAM_UTILS);
+        String policy = Files.readString(POLICY);
         String config = Files.readString(CONFIG);
 
-        check(teamUtils.contains("shouldBlockCurrentMagicSideEffect"),
+        check(policy.contains("shouldBlock"),
                 "side-effect hooks must share one central policy helper");
+        check(policy.contains("resolveMagicBehavior") && policy.contains("resolveMagicSource"),
+                "side-effect policy must reuse normalized global magic evidence");
         check(entity.contains("setDeltaMovement"),
                 "forced magic movement must pass through the global side-effect gate");
         check(entity.contains("setSecondsOnFire") || entity.contains("setRemainingFireTicks"),
@@ -36,7 +39,7 @@ public final class GlobalMagicSideEffectContractTest {
                         && config.contains("\"LivingEntityMagicSideEffectMixin\""),
                 "global side-effect mixins must be registered in the strict core config");
 
-        String combined = (entity + living).toLowerCase();
+        String combined = (entity + living + policy).toLowerCase();
         for (String forbidden : new String[]{"traveloptics", "familiars", "geomancy", "cataclysm"}) {
             check(!combined.contains(forbidden), "global side-effect hooks must remain addon-neutral: " + forbidden);
         }
