@@ -12,8 +12,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.function.Consumer;
-
 /**
  * Generic server boundary for magic entities that outlive their cast stack.
  *
@@ -40,30 +38,34 @@ public abstract class EntityMagicAttributionMixin {
         }
     }
 
+    /**
+     * Wrap the actual Entity#tick invocation rather than an implementation-detail
+     * helper such as Consumer.accept. Entity#tick is the stable common boundary
+     * for every non-passenger entity processed by ServerLevel.
+     */
     @Redirect(
             method = "tickNonPassenger",
             at = @At(
                     value = "INVOKE",
-                    target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"
+                    target = "Lnet/minecraft/world/entity/Entity;tick()V"
             )
     )
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private void magicTeam$withPersistentMagicContext(Consumer ticker, Object rawEntity) {
-        if (!(rawEntity instanceof Entity entity) || !TeamUtils.isEnabled()) {
-            ticker.accept(rawEntity);
+    private void magicTeam$withPersistentMagicContext(Entity entity) {
+        if (!TeamUtils.isEnabled()) {
+            entity.tick();
             return;
         }
 
         ServerLevel level = (ServerLevel) (Object) this;
         MagicAttribution attribution = MagicAttributionIndex.refresh(entity, level.getGameTime());
         if (attribution == null) {
-            ticker.accept(rawEntity);
+            entity.tick();
             return;
         }
 
         MagicTeamEffectContext.push(entity, attribution);
         try {
-            ticker.accept(rawEntity);
+            entity.tick();
         } finally {
             MagicTeamEffectContext.pop();
         }
