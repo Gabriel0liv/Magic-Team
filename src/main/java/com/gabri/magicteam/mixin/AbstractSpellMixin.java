@@ -21,8 +21,8 @@ public class AbstractSpellMixin {
 
     /**
      * Player casts enter AbstractSpell through attemptInitiateCast/castSpell.
-     * Redirect the virtual hooks here so an addon override is inside the context
-     * from its first instruction, rather than only when it eventually calls super.
+     * Redirect the virtual hooks here so addon overrides are covered from their
+     * first instruction, even when they never call the AbstractSpell base method.
      */
     @Redirect(
             method = "attemptInitiateCast",
@@ -36,6 +36,11 @@ public class AbstractSpellMixin {
                                                   int spellLevel,
                                                   LivingEntity entity,
                                                   MagicData magicData) {
+        if (magicTeam$cancelProtectedTarget(level, entity, magicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            return;
+        }
+
         CastSource castSource = magicData == null ? null : magicData.getCastSource();
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
         try {
@@ -58,6 +63,11 @@ public class AbstractSpellMixin {
                                                LivingEntity entity,
                                                CastSource castSource,
                                                MagicData magicData) {
+        if (magicTeam$cancelProtectedTarget(level, entity, magicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            return;
+        }
+
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
         try {
             spell.onCast(level, spellLevel, entity, castSource, magicData);
