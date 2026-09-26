@@ -19,7 +19,6 @@ public final class MagicAttributionPropagationContractTest {
 
         check(coreConfig.contains("\"EntityMagicAttributionMixin\""),
                 "generic server attribution boundary must be registered in core config");
-
         check(serverBoundary.contains("addFreshEntity"),
                 "spawned magic entities must inherit attribution at a shared server boundary");
         check(serverBoundary.contains("MagicTeamEffectContext.currentAttribution()"),
@@ -28,8 +27,8 @@ public final class MagicAttributionPropagationContractTest {
                 "spawned entity attribution must be persisted by UUID");
         check(serverBoundary.contains("tickNonPassenger"),
                 "attributed delayed entities must re-enter magic context during server tick");
-        check(serverBoundary.contains("MagicAttributionIndex.get(entity, level.getGameTime())"),
-                "delayed entity scope must validate attribution expiry");
+        check(serverBoundary.contains("MagicAttributionIndex.refresh(entity, level.getGameTime())"),
+                "active delayed entities must validate and refresh attribution lifetime");
         check(serverBoundary.contains("if (!TeamUtils.isEnabled()"),
                 "disabled Magic Team must not create enforcement attribution");
         check(serverBoundary.contains("finally"),
@@ -44,9 +43,7 @@ public final class MagicAttributionPropagationContractTest {
                     "shared Iron's entity path must re-enter the recovered context");
         }
 
-        for (String forbidden : new String[]{
-                "traveloptics", "geomancyplus", "familiars", "cataclysm"
-        }) {
+        for (String forbidden : new String[]{"traveloptics", "geomancyplus", "familiars", "cataclysm"}) {
             check(!serverBoundary.toLowerCase().contains(forbidden),
                     "generic propagation must not name an addon: " + forbidden);
         }
