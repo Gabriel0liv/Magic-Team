@@ -28,8 +28,7 @@ public abstract class ServerEventsRetaliationFriendlyFireMixin {
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;m_7311_(I)V"
             ),
-            remap = false,
-            require = 1
+            remap = false
     )
     private static void magicTeam$guardScorcherRetaliation(LivingEntity retaliationTarget,
                                                             int fireTicks,
@@ -45,8 +44,7 @@ public abstract class ServerEventsRetaliationFriendlyFireMixin {
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/level/Level;m_7967_(Lnet/minecraft/world/entity/Entity;)Z"
             ),
-            remap = false,
-            require = 1
+            remap = false
     )
     private static boolean magicTeam$guardPlagueRetaliation(Level level,
                                                              Entity projectile,
