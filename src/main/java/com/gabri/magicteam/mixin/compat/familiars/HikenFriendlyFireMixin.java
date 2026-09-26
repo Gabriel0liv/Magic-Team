@@ -22,7 +22,6 @@ public abstract class HikenFriendlyFireMixin {
                     target = "Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z",
                     remap = false
             ),
-            require = 2,
             remap = false
     )
     private boolean magicTeam$useFriendlyFirePolicy(Entity owner, Entity target) {
