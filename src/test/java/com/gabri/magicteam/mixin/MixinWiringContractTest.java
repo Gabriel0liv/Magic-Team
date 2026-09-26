@@ -9,15 +9,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Dependency-free structural regression checks for mixin wiring.
- *
- * <p>This intentionally reads source/resources from the checkout so it can run
- * without Forge, Iron's Spellbooks, or Babel Core on the classpath.</p>
- */
+/** Dependency-free structural regression checks for global-first mixin wiring. */
 public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
-    private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final List<Path> MIXIN_CONFIGS = List.of(
             Path.of("src/main/resources/magic_team.mixins.json"),
             Path.of("src/main/resources/magic_team.traveloptics.mixins.json"),
@@ -25,193 +19,99 @@ public final class MixinWiringContractTest {
             Path.of("src/main/resources/magic_team.familiars.mixins.json"),
             Path.of("src/main/resources/magic_team.cataclysm.mixins.json")
     );
-    private static final Path MOD_ENTRY = Path.of("src/main/java/com/gabri/magicteam/MagicTeam.java");
     private static final Path MOB_DISPATCHER = MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java");
     private static final Pattern RUNTIME_METHOD_CALL = Pattern.compile("\\.m_\\d+_\\s*\\(");
-    private static final List<String> REQUIRED_DELAYED_HOSTILE_ADAPTERS = List.of(
-            "compat.traveloptics.BanishFriendlyFireMixin",
-            "compat.traveloptics.ReversalFriendlyFireMixin",
-            "compat.traveloptics.CrimsonDescendFriendlyFireMixin",
-            "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin",
-            "compat.traveloptics.CursedWraithbladeFriendlyFireMixin",
-            "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
-            "compat.traveloptics.CataclysmFlameJetFriendlyFireMixin",
-            "compat.traveloptics.CataclysmAmethystClusterFriendlyFireMixin",
-            "compat.traveloptics.CataclysmVoidRuneFriendlyFireMixin",
-            "compat.traveloptics.CataclysmAxeBladeFriendlyFireMixin",
-            "compat.traveloptics.CataclysmLaserBeamFriendlyFireMixin",
-            "compat.traveloptics.CataclysmPhantomArrowFriendlyFireMixin",
-            "compat.traveloptics.CataclysmAncientDesertSteleFriendlyFireMixin",
-            "compat.traveloptics.ArcaneArtilleryTargetingMixin",
-            "compat.traveloptics.ScourgeOfTheSandsTargetingMixin",
-            "compat.traveloptics.ScourgeOfTheSandsLevelThreeTargetingMixin",
-            "compat.traveloptics.GyroSlashFriendlyFireMixin",
-            "compat.traveloptics.DragonSpiritSpellFriendlyFireMixin",
-            "compat.traveloptics.GalenaShatterFriendlyFireMixin",
-            "compat.traveloptics.GalenaMarkFriendlyFireMixin",
-            "compat.traveloptics.TidalGraspFriendlyFireMixin",
-            "compat.traveloptics.FloodSlashFriendlyFireMixin",
-            "compat.traveloptics.EndEruptionFriendlyFireMixin",
-            "compat.geomancyplus.TremorStepFriendlyFireMixin"
-    );
 
     private MixinWiringContractTest() {
     }
 
     public static void main(String[] args) throws Exception {
-        confirmedDelayedHostileBypassesHaveAdapters();
-        flareVacuumPreservesOriginalCaster();
-        galenaMarkRechecksFriendlyFireDuringLifetime();
-        tidalGraspUsesHostileContextForDelayedEffects();
-        floodSlashDoesNotRewardBlockedHits();
-        endEruptionFiltersBeforeDirectDamage();
-        tremorStepFiltersBeforeDamageSideEffects();
+        globalEntityAttributionIsWired();
+        globalEffectAttributionIsWired();
+        globalTargetGateIsWired();
+        globalSideEffectGatesAreWired();
+        retainedTransactionalExceptionsRemainNarrow();
         mixinBodiesUseMappedMinecraftCalls();
         allMixinSourcesAreRegisteredAndAllRegistrationsExist();
         mobDispatcherLetsMixinRemapTheVanillaOverride();
     }
 
-    private static void confirmedDelayedHostileBypassesHaveAdapters() throws IOException {
+    private static void globalEntityAttributionIsWired() throws IOException {
+        Path mixin = MIXIN_ROOT.resolve("EntityMagicAttributionMixin.java");
+        String source = Files.readString(mixin);
         Set<String> registered = readAllMixinRegistrations();
-
-        for (String adapter : REQUIRED_DELAYED_HOSTILE_ADAPTERS) {
-            Path source = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
-            check(Files.isRegularFile(source), "confirmed hostile bypass has no adapter source: " + adapter);
-            check(registered.contains(adapter), "confirmed hostile bypass adapter is not registered: " + adapter);
-            check(Files.readString(source).contains("TeamUtils.shouldBlockFriendlyFire"),
-                    "confirmed hostile bypass adapter does not use friendly-fire policy: " + adapter);
-        }
+        check(registered.contains("EntityMagicAttributionMixin"), "global entity attribution mixin is not registered");
+        check(source.contains("addFreshEntity"), "entity attribution must capture spawned magic entities");
+        check(source.contains("tickNonPassenger"), "entity attribution must re-enter context during delayed ticks");
+        check(source.contains("MagicAttributionIndex.refresh"), "active attributed entities must refresh TTL");
+        check(source.contains("finally") && source.contains("MagicTeamEffectContext.pop"),
+                "entity attribution context must always be released");
     }
 
-    private static void flareVacuumPreservesOriginalCaster() throws IOException {
-        String adapter = "compat.traveloptics.FlareVacuumAttributionMixin";
-        Path attribution = UTIL_ROOT.resolve("FlareVacuumAttribution.java");
-        Path gyro = MIXIN_ROOT.resolve("compat/traveloptics/GyroSlashFriendlyFireMixin.java");
-        Path flareVacuum = MIXIN_ROOT.resolve("compat/traveloptics/FlareVacuumAttributionMixin.java");
+    private static void globalEffectAttributionIsWired() throws IOException {
+        Path effectMixin = MIXIN_ROOT.resolve("MobEffectInstanceMagicAttributionMixin.java");
+        Path livingMixin = MIXIN_ROOT.resolve("LivingEntityMixin.java");
+        String effect = Files.readString(effectMixin);
+        String living = Files.readString(livingMixin);
         Set<String> registered = readAllMixinRegistrations();
-
-        check(Files.isRegularFile(attribution), "Flare Vacuum attribution tracker is missing");
-        check(Files.isRegularFile(flareVacuum), "Flare Vacuum attribution mixin is missing");
-        check(registered.contains(adapter), "Flare Vacuum attribution mixin is not registered");
-
-        String gyroSource = Files.readString(gyro);
-        check(gyroSource.contains("FlareVacuumAttribution.record"),
-                "Gyro Slash must record the caster only after Flare Vacuum is applied");
-        check(gyroSource.contains("if (applied)"),
-                "Gyro Slash must not replace attribution when addEffect rejects the reapplication");
-
-        String flareSource = Files.readString(flareVacuum);
-        check(flareSource.contains("FlareVacuumAttribution.begin"),
-                "Flare Vacuum tick must enter the stored caster scope");
-        check(flareSource.contains("FlareVacuumAttribution.end"),
-                "Flare Vacuum tick must always leave the stored caster scope");
-        check(flareSource.contains("FlareVacuumAttribution.getActiveSource"),
-                "Flare Vacuum Flame Jets must receive the active original caster");
-        check(flareSource.contains("@ModifyArg"),
-                "Flare Vacuum must restore caster at the Flame Jet constructor call site");
-        check(flareSource.contains("pullEntityTowards"),
-                "Flare Vacuum must intercept its direct pull side effect");
-        check(flareSource.contains("TeamUtils.shouldBlockFriendlyFire"),
-                "Flare Vacuum pull must honor the original caster's friendly-fire policy");
-        check(flareSource.contains("CallbackInfo") && flareSource.contains("ci.cancel()"),
-                "Flare Vacuum must cancel protected pull operations before movement is written");
-
-        String attributionSource = Files.readString(attribution);
-        check(attributionSource.contains("getActiveDepth"),
-                "Flare Vacuum attribution context must expose depth for leak detection");
-        check(attributionSource.contains("clearActiveContext"),
-                "Flare Vacuum attribution context must support emergency clearing");
-
-        String modEntry = Files.readString(MOD_ENTRY);
-        check(modEntry.contains("FlareVacuumAttribution.getActiveDepth"),
-                "server tick leak guard must inspect Flare Vacuum attribution context");
-        check(modEntry.contains("FlareVacuumAttribution.clearActiveContext"),
-                "server tick leak guard must clear stale Flare Vacuum attribution context");
+        check(registered.contains("MobEffectInstanceMagicAttributionMixin"),
+                "delayed MobEffect attribution mixin is not registered");
+        check(living.contains("MagicEffectAttributionIndex.record"),
+                "successful magic effects must persist their attribution");
+        check(effect.contains("MagicEffectAttributionIndex.get"),
+                "effect ticks must recover persistent attribution");
+        check(effect.contains("MagicTeamEffectContext.push") && effect.contains("MagicTeamEffectContext.pop"),
+                "effect ticks must run inside restored magic context");
     }
 
-    private static void galenaMarkRechecksFriendlyFireDuringLifetime() throws IOException {
-        Path shatter = MIXIN_ROOT.resolve("compat/traveloptics/GalenaShatterFriendlyFireMixin.java");
-        Path mark = MIXIN_ROOT.resolve("compat/traveloptics/GalenaMarkFriendlyFireMixin.java");
-
-        check(Files.isRegularFile(shatter), "Galena Shatter application adapter is missing");
-        check(Files.isRegularFile(mark), "Galena Mark lifetime adapter is missing");
-
-        String shatterSource = Files.readString(shatter);
-        check(shatterSource.contains("processStackedTarget"),
-                "Galena Shatter must gate before consuming stacks and applying a mark");
-        check(shatterSource.contains("setReturnValue(false)"),
-                "protected Galena Shatter targets must be rejected before mark application");
-
-        String markSource = Files.readString(mark);
-        check(markSource.contains("@Invoker(\"getTarget\")"),
-                "Galena Mark adapter must resolve its persisted target");
-        check(markSource.contains("@Invoker(\"getCaster\")"),
-                "Galena Mark adapter must resolve its persisted caster");
-        check(markSource.contains("triggerMagneticBlast"),
-                "Galena Mark must recheck friendly fire before the delayed magnetic blast");
-        check(markSource.contains("method = \"m_8119_()V\""),
-                "Galena Mark must recheck friendly fire during damage ticks");
-        check(markSource.contains("target = \"Lnet/minecraft/world/entity/Entity;m_20256_(Lnet/minecraft/world/phys/Vec3;)V\""),
-                "Galena Mark must retain the pull/push movement interception while its match count stays fail-soft");
+    private static void globalTargetGateIsWired() throws IOException {
+        String source = Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java"));
+        check(source.contains("TargetEntityCastData"),
+                "standard Iron's selected-target data must be handled globally");
+        check(source.contains("magicTeam$cancelProtectedTarget"),
+                "AbstractSpell must centralize targeted hostile spell filtering");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "global target gate must use central Magic Team policy");
+        check(!Files.exists(MIXIN_ROOT.resolve("compat/traveloptics/OrbitalVoidFriendlyFireMixin.java")),
+                "Orbital Void must not regain a fragile spell-specific target redirect");
+        check(!Files.exists(MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java")),
+                "Tidal Grasp standard target handling must remain global-first");
     }
 
-    private static void tidalGraspUsesHostileContextForDelayedEffects() throws IOException {
-        String adapter = "compat.traveloptics.TidalGraspEffectContextMixin";
-        Path spell = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java");
-        Path effect = MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspEffectContextMixin.java");
+    private static void globalSideEffectGatesAreWired() throws IOException {
         Set<String> registered = readAllMixinRegistrations();
-
-        check(Files.isRegularFile(spell), "Tidal Grasp spell adapter is missing");
-        check(Files.isRegularFile(effect), "Tidal Grasp delayed-effect context adapter is missing");
-        check(registered.contains(adapter), "Tidal Grasp delayed-effect context adapter is not registered");
-
-        String spellSource = Files.readString(spell);
-        check(spellSource.contains("checkPreCastConditions"),
-                "Tidal Grasp must reject a protected target before the cast starts");
-        check(spellSource.contains("onServerCastTick"),
-                "Tidal Grasp must recheck the target while channeling");
-        check(spellSource.contains("onCast"),
-                "Tidal Grasp must recheck helper/teleport operations at release");
-
-        String effectSource = Files.readString(effect);
-        check(effectSource.contains("InteractionType.HARMFUL"),
-                "Tidal Grasp detonation must classify stun/wet/damage as harmful");
-        check(effectSource.contains("MagicTeamEffectContext.push"),
-                "Tidal Grasp detonation must enter harmful effect context");
-        check(effectSource.contains("MagicTeamEffectContext.pop"),
-                "Tidal Grasp detonation must leave harmful effect context");
+        check(registered.contains("EntityMagicSideEffectMixin"),
+                "global Entity side-effect gate is not registered");
+        check(registered.contains("LivingEntityMagicSideEffectMixin"),
+                "global LivingEntity side-effect gate is not registered");
+        String entity = Files.readString(MIXIN_ROOT.resolve("EntityMagicSideEffectMixin.java"));
+        String living = Files.readString(MIXIN_ROOT.resolve("LivingEntityMagicSideEffectMixin.java"));
+        check(entity.contains("setDeltaMovement"), "forced movement must pass through global magic policy");
+        check(entity.contains("setSecondsOnFire") || entity.contains("setRemainingFireTicks"),
+                "magic fire side effects must pass through global policy");
+        check(living.contains("removeEffect") && living.contains("removeAllEffects"),
+                "hostile magic cleanse side effects must pass through global policy");
     }
 
-    private static void floodSlashDoesNotRewardBlockedHits() throws IOException {
-        Path adapter = MIXIN_ROOT.resolve("compat/traveloptics/FloodSlashFriendlyFireMixin.java");
-        check(Files.isRegularFile(adapter), "Flood Slash adapter is missing");
-        String source = Files.readString(adapter);
-        check(source.contains("@Shadow") && source.contains("victims"),
-                "Flood Slash must preserve victim bookkeeping for blocked targets");
-        check(source.contains("victims.add"),
-                "Flood Slash must mark protected targets as processed to prevent retry loops");
-        check(source.contains("ci.cancel()"),
-                "Flood Slash must stop damage, Wet, mana and Replenish rewards on a blocked hit");
-    }
+    private static void retainedTransactionalExceptionsRemainNarrow() throws IOException {
+        Path floodSlash = MIXIN_ROOT.resolve("compat/traveloptics/FloodSlashFriendlyFireMixin.java");
+        Path tremorStep = MIXIN_ROOT.resolve("compat/geomancyplus/TremorStepFriendlyFireMixin.java");
+        Path galenaShatter = MIXIN_ROOT.resolve("compat/traveloptics/GalenaShatterFriendlyFireMixin.java");
 
-    private static void endEruptionFiltersBeforeDirectDamage() throws IOException {
-        Path adapter = MIXIN_ROOT.resolve("compat/traveloptics/EndEruptionFriendlyFireMixin.java");
-        check(Files.isRegularFile(adapter), "End Eruption adapter is missing");
-        String source = Files.readString(adapter);
-        check(source.contains("triggerEruption"),
-                "End Eruption must gate the custom delayed eruption path");
-        check(source.contains("getEntitiesOfClass"),
-                "End Eruption must filter protected teammates before direct hurt calls");
-    }
+        check(Files.isRegularFile(floodSlash), "Flood Slash transaction exception is missing");
+        String flood = Files.readString(floodSlash);
+        check(flood.contains("victims.add") && flood.contains("ci.cancel()"),
+                "Flood Slash exception must stop rewards while preserving victim bookkeeping");
 
-    private static void tremorStepFiltersBeforeDamageSideEffects() throws IOException {
-        Path adapter = MIXIN_ROOT.resolve("compat/geomancyplus/TremorStepFriendlyFireMixin.java");
-        check(Files.isRegularFile(adapter), "Tremor Step adapter is missing");
-        String source = Files.readString(adapter);
-        check(source.contains("triggerTremorShockwave"),
-                "Tremor Step must gate its periodic hostile shockwave");
-        check(source.contains("getEntitiesOfClass"),
-                "Tremor Step must filter protected teammates before damage and invulnerability writes");
+        check(Files.isRegularFile(tremorStep), "Tremor Step side-effect exception is missing");
+        String tremor = Files.readString(tremorStep);
+        check(tremor.contains("getEntitiesOfClass") && tremor.contains("shouldBlockFriendlyFire"),
+                "Tremor Step must filter before damage-adjacent invulnerability writes");
+
+        check(Files.isRegularFile(galenaShatter), "Galena Shatter transaction exception is missing");
+        String galena = Files.readString(galenaShatter);
+        check(galena.contains("processStackedTarget") && galena.contains("setReturnValue(false)"),
+                "Galena Shatter must gate stack consumption/mark creation before side effects");
     }
 
     private static void mixinBodiesUseMappedMinecraftCalls() throws IOException {
@@ -231,18 +131,15 @@ public final class MixinWiringContractTest {
     private static void allMixinSourcesAreRegisteredAndAllRegistrationsExist() throws IOException {
         Set<String> registered = readAllMixinRegistrations();
         Set<String> sources = new LinkedHashSet<>();
-
         try (var paths = Files.walk(MIXIN_ROOT)) {
             paths.filter(path -> path.toString().endsWith(".java"))
                     .filter(path -> readUnchecked(path).contains("@Mixin"))
                     .map(MixinWiringContractTest::toMixinName)
                     .forEach(sources::add);
         }
-
         for (String source : sources) {
             check(registered.contains(source), "mixin source is not registered: " + source);
         }
-
         for (String registration : registered) {
             Path source = MIXIN_ROOT.resolve(registration.replace('.', '/') + ".java");
             check(Files.isRegularFile(source), "mixin registration has no source file: " + registration);
@@ -251,11 +148,10 @@ public final class MixinWiringContractTest {
 
     private static void mobDispatcherLetsMixinRemapTheVanillaOverride() throws IOException {
         String source = Files.readString(MOB_DISPATCHER);
-
         check(!source.contains("@Mixin(value = AbstractSpellCastingMob.class, remap = false)"),
-                "class-level remap=false prevents mapping customServerAiStep in dev/reobf environments");
+                "class-level remap=false prevents mapping customServerAiStep");
         check(count(source, "method = \"customServerAiStep\"") == 2,
-                "both mob tick redirects must target the Mojmap customServerAiStep selector");
+                "both mob tick redirects must target customServerAiStep");
         check(!source.contains("method = \"m_8024_()V\""),
                 "runtime SRG name must not be hardcoded for the vanilla override");
     }
@@ -274,9 +170,7 @@ public final class MixinWiringContractTest {
         int open = json.indexOf('[', start);
         int close = json.indexOf(']', open);
         check(start >= 0 && open >= 0 && close > open, "could not locate mixins array");
-
-        String body = json.substring(open + 1, close);
-        Matcher matcher = Pattern.compile("\\\"([^\\\"]+)\\\"").matcher(body);
+        Matcher matcher = Pattern.compile("\\\"([^\\\"]+)\\\"").matcher(json.substring(open + 1, close));
         Set<String> result = new LinkedHashSet<>();
         while (matcher.find()) {
             result.add(matcher.group(1));
@@ -298,15 +192,36 @@ public final class MixinWiringContractTest {
     }
 
     private static String stripStringLiterals(String line) {
-        return line.replaceAll("\"(?:\\\\.|[^\"\\\\])*\"", "\"\"");
+        StringBuilder result = new StringBuilder(line.length());
+        boolean inString = false;
+        boolean escaped = false;
+        for (int index = 0; index < line.length(); index++) {
+            char current = line.charAt(index);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (current == '\\') {
+                    escaped = true;
+                } else if (current == '"') {
+                    inString = false;
+                }
+                result.append(' ');
+            } else if (current == '"') {
+                inString = true;
+                result.append(' ');
+            } else {
+                result.append(current);
+            }
+        }
+        return result.toString();
     }
 
-    private static int count(String value, String needle) {
+    private static int count(String source, String token) {
         int count = 0;
-        int index = 0;
-        while ((index = value.indexOf(needle, index)) >= 0) {
+        int offset = 0;
+        while ((offset = source.indexOf(token, offset)) >= 0) {
             count++;
-            index += needle.length();
+            offset += token.length();
         }
         return count;
     }
