@@ -2,6 +2,7 @@ package com.gabri.magicteam.mixin;
 
 import com.gabri.magicteam.util.MagicAttribution;
 import com.gabri.magicteam.util.MagicAttributionIndex;
+import com.gabri.magicteam.util.MagicEffectAttributionIndex;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
@@ -42,6 +43,30 @@ public class LivingEntityMixin {
     }
 
     @Inject(
+            method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z",
+            at = @At("RETURN")
+    )
+    private void magicTeam$recordEffectAttribution(MobEffectInstance effectInstance,
+                                                   CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled() || effectInstance == null || !cir.getReturnValueZ()) {
+            return;
+        }
+
+        MagicAttribution attribution = MagicTeamEffectContext.currentAttribution();
+        if (attribution == null) {
+            return;
+        }
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        MagicEffectAttributionIndex.record(
+                target,
+                effectInstance,
+                attribution,
+                target.level().getGameTime()
+        );
+    }
+
+    @Inject(
             method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
             at = @At("HEAD"),
             cancellable = true
@@ -62,6 +87,31 @@ public class LivingEntityMixin {
         if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell, attribution, interactionType)) {
             cir.setReturnValue(false);
         }
+    }
+
+    @Inject(
+            method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("RETURN")
+    )
+    private void magicTeam$recordEffectAttributionWithSource(MobEffectInstance effectInstance,
+                                                             Entity source,
+                                                             CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled() || effectInstance == null || !cir.getReturnValueZ()) {
+            return;
+        }
+
+        MagicAttribution attribution = MagicTeamEffectContext.currentAttribution();
+        if (attribution == null) {
+            return;
+        }
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        MagicEffectAttributionIndex.record(
+                target,
+                effectInstance,
+                attribution,
+                target.level().getGameTime()
+        );
     }
 
     @Inject(
