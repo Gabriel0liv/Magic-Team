@@ -111,6 +111,6 @@ Magic-Team is distributed under a proprietary license. See `LICENSE.txt` for the
 
 ## Credits
 
-**Author**: [StaDPhoe](https://x.com/SatPhoe)
+**Author**: [SatDPhoe](https://x.com/SatPhoe)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/satdphoe)
