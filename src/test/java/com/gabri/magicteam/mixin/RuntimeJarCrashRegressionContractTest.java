@@ -17,6 +17,7 @@ public final class RuntimeJarCrashRegressionContractTest {
         playerCastTickTargetsTheCompiledLambdaBody();
         aquaMissilesMatchesTheSingleRuntimeAllianceCheck();
         solarStormGuardsTheTargetPredicateWithoutRedirectingInternals();
+        tidalGraspGuardsReleaseAtMethodBoundary();
     }
 
     private static void playerCastTickTargetsTheCompiledLambdaBody() throws Exception {
@@ -52,6 +53,22 @@ public final class RuntimeJarCrashRegressionContractTest {
                 "Solar Storm must not depend on an internal vanilla alliance call that is absent in Geomancy Plus 2.0.0");
         check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
                 "Solar Storm direct predicate guard must still use the Magic Team policy");
+    }
+
+    private static void tidalGraspGuardsReleaseAtMethodBoundary() throws Exception {
+        String source = Files.readString(
+                MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java"));
+
+        check(source.contains("method = \"onCast\""),
+                "Tidal Grasp must recheck its selected target at release");
+        check(source.contains("at = @At(\"HEAD\")"),
+                "Tidal Grasp release protection must not depend on addon-internal teleport/effect calls");
+        check(source.contains("cancellable = true"),
+                "Tidal Grasp release guard must be able to cancel the protected cast before side effects");
+        check(!source.contains("@Redirect("),
+                "Tidal Grasp 6.3.0 runtime bytecode does not contain the assumed teleport redirect target");
+        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "Tidal Grasp release guard must still use the Magic Team policy");
     }
 
     private static void check(boolean condition, String message) {
