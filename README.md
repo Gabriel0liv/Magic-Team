@@ -91,7 +91,9 @@ Malformed JSON is rejected instead of being saved.
 * **Server Dependencies**: Iron's Spells 'n Spellbooks and Babel Core
 * **Side**: Server-side
 
-Magic Team 2.4.0 also contains explicit compatibility work for the audited Travel Optics, GTBC Geomancy Plus and Alshanex's Familiars hostile paths. Addons that register normal `AbstractSpell` entries automatically appear in the spell command autocomplete even when no special gameplay adapter is required.
+Magic Team 2.4.0 contains explicit compatibility work for the audited Travel Optics, GTBC Geomancy Plus, Alshanex's Familiars and Cataclysm paths. These addon adapters are fail-soft: if an addon update changes an adapter-specific injection point, that adapter is skipped instead of aborting server startup. Generic Magic Team protection still applies wherever the spell reaches the normal core hooks; only the incompatible adapter-specific behavior falls back to the addon's native behavior. Magic Team logs compatibility degradation as a warning when Mixin reports a recoverable optional-adapter application error.
+
+A clean startup therefore does not prove every optional adapter matched the installed addon version. Addons that register normal `AbstractSpell` entries still appear in spell command autocomplete even when no special gameplay adapter is required.
 
 ## Why This Mod?
 
