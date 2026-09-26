@@ -23,16 +23,19 @@ public final class GlobalMagicSideEffectContractTest {
         String policy = Files.readString(POLICY);
         String config = Files.readString(CONFIG);
 
-        check(policy.contains("shouldBlock"),
-                "side-effect hooks must share one central policy helper");
+        check(policy.contains("shouldBlock"), "side-effect hooks must share one central policy helper");
         check(policy.contains("resolveMagicBehavior") && policy.contains("resolveMagicSource"),
                 "side-effect policy must reuse normalized global magic evidence");
         check(entity.contains("setDeltaMovement"),
                 "forced magic movement must pass through the global side-effect gate");
         check(entity.contains("setSecondsOnFire") || entity.contains("setRemainingFireTicks"),
                 "hostile magic fire side effects must pass through the global gate");
+        check(entity.contains("getRemainingFireTicks") && entity.contains("ticks <="),
+                "reducing/extinguishing fire must remain a beneficial side effect even inside mixed spells");
         check(living.contains("removeEffect"),
                 "hostile magic buff removal must pass through the global gate");
+        check(living.contains("effect.isBeneficial()"),
+                "removing a harmful effect must remain a beneficial cleanse in mixed spells");
         check(living.contains("removeAllEffects"),
                 "bulk hostile magic buff removal must pass through the global gate");
         check(config.contains("\"EntityMagicSideEffectMixin\"")
