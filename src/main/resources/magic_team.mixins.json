@@ -11,6 +11,7 @@
     "AoeEntityMixin",
     "EntityMixin",
     "EntityMagicAttributionMixin",
+    "MobEffectInstanceMagicAttributionMixin",
     "AreaEffectCloudMixin",
     "ThrownPotionMixin",
     "PoisonCloudMixin",
