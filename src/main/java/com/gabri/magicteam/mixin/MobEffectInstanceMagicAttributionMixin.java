@@ -9,40 +9,62 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Re-enters the original magic context while an attributed MobEffect performs its delayed tick. */
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+/**
+ * Re-enters the original magic context while an attributed MobEffect performs
+ * its delayed tick.
+ *
+ * <p>This intentionally wraps the MobEffectInstance#tick method boundary rather
+ * than redirecting its internal applyEffectTick call. Arclight and other
+ * transformers may rewrite that internal invocation while preserving the public
+ * tick contract.</p>
+ */
 @Mixin(MobEffectInstance.class)
 public abstract class MobEffectInstanceMagicAttributionMixin {
+    private static final ThreadLocal<Deque<Boolean>> MAGIC_TEAM_SCOPES =
+            ThreadLocal.withInitial(ArrayDeque::new);
 
-    @Redirect(
-            method = "tick",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/world/effect/MobEffect;applyEffectTick(Lnet/minecraft/world/entity/LivingEntity;I)V"
-            )
-    )
-    private void magicTeam$withEffectAttribution(MobEffect effect, LivingEntity target, int amplifier) {
-        if (!TeamUtils.isEnabled() || target == null) {
-            effect.applyEffectTick(target, amplifier);
-            return;
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void magicTeam$beginEffectAttribution(LivingEntity target,
+                                                  Runnable onExpiration,
+                                                  CallbackInfoReturnable<Boolean> cir) {
+        boolean pushed = false;
+
+        if (TeamUtils.isEnabled() && target != null) {
+            MobEffect effect = ((MobEffectInstance) (Object) this).getEffect();
+            MagicAttribution attribution = MagicEffectAttributionIndex.get(
+                    target,
+                    effect,
+                    target.level().getGameTime()
+            );
+
+            if (attribution != null) {
+                MagicTeamEffectContext.push(target, attribution);
+                pushed = true;
+            }
         }
 
-        MagicAttribution attribution = MagicEffectAttributionIndex.get(
-                target,
-                effect,
-                target.level().getGameTime()
-        );
-        if (attribution == null) {
-            effect.applyEffectTick(target, amplifier);
-            return;
-        }
+        MAGIC_TEAM_SCOPES.get().push(pushed);
+    }
 
-        MagicTeamEffectContext.push(target, attribution);
-        try {
-            effect.applyEffectTick(target, amplifier);
-        } finally {
+    @Inject(method = "tick", at = @At("RETURN"))
+    private void magicTeam$endEffectAttribution(LivingEntity target,
+                                                Runnable onExpiration,
+                                                CallbackInfoReturnable<Boolean> cir) {
+        Deque<Boolean> scopes = MAGIC_TEAM_SCOPES.get();
+        boolean pushed = !scopes.isEmpty() && scopes.pop();
+
+        if (pushed) {
             MagicTeamEffectContext.pop();
+        }
+
+        if (scopes.isEmpty()) {
+            MAGIC_TEAM_SCOPES.remove();
         }
     }
 }
