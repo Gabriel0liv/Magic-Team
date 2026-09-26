@@ -1,141 +1,163 @@
-# Magic Team — Optional Addon Mixin Resilience Design
+# Magic Team — Optional Addon Fail-Soft Adapter Design
 
 Date: 2026-08-28
-Status: Approved design, pending implementation plan
+Revised: 2026-09-26
+Status: Approved design, pending revised implementation plan
 Branch: `agent/friendly-fire-compat-2.3.3`
 
 ## Problem
 
-Magic Team supports optional integrations for Iron's addons and related mods such as Travel Optics, GTBC Geomancy Plus, Alshanex Familiars and Cataclysm. Those integrations already avoid hard Java dependencies by using `@Pseudo` and string targets where appropriate, so an addon that is completely absent does not need to be installed.
+Magic Team has optional adapters for Travel Optics, GTBC Geomancy Plus, Alshanex Familiars, Cataclysm and similar Iron's addons. These adapters exist only to close gaps that the generic Magic Team protection cannot cover, such as custom target selection, custom entities, delayed effects, teleports and addon-owned damage paths.
 
-The remaining failure mode is version drift while an addon is present. A future addon update can rename a target class, target method, descriptor or shadowed member. The current single `magic_team.mixins.json` is globally `required: true` with `defaultRequire: 1`, so a failed optional integration can become fatal even though the addon itself is not a mandatory dependency of Magic Team.
+The previous resilience design was incomplete. It split optional adapters into `required: false` mixin configs but left `injectors.defaultRequire: 1`. Real Arclight/Forge smoke tests proved that this still crashes startup when an installed addon changes an injection point: Aqua Missiles, Solar Storm, Tidal Grasp and Orbital Void all produced critical `0/1` or `1/2` injection failures despite living in optional configs.
 
-The goal is to preserve strict failure semantics for Magic Team's core Iron's/Minecraft hooks while isolating optional addon adapters so incompatibility in one addon does not prevent the server from starting.
+Therefore `required: false` alone is not sufficient. Optional adapter incompatibility must degrade only that adapter, not the server.
 
-## Invariants
+## Required behavior
 
 1. Forge, Minecraft, Iron's Spellbooks and Babel Core remain mandatory dependencies.
-2. Optional addons remain optional and must not become hard-linked Java dependencies.
-3. Core Magic Team mixins remain strict: a broken required Iron's/Minecraft hook must still fail loudly rather than silently reducing protection.
-4. Optional addon adapters must remain observable when incompatible. Do not hide broken injectors by globally changing them to `require = 0`.
-5. Failure in one optional addon integration must not disable unrelated optional addon integrations.
-6. Missing or renamed spell registry IDs must not crash startup; unknown spells continue to use Magic Team's safe default behavior.
-7. This change must not alter friendly-fire, support, healing, ownership or summon semantics.
+2. Core Magic Team hooks remain strict. A broken hook required for the generic Magic Team policy may still fail startup rather than silently disabling the core protection layer.
+3. Optional addon adapters are fail-soft. An adapter that no longer matches its addon must not crash Minecraft, Forge, Arclight, the addon, or Magic Team.
+4. A failed optional adapter falls back to the behavior that would exist without that adapter:
+   - generic Magic Team protection remains active wherever the spell still passes through generic hooks;
+   - only the adapter-specific customization is lost;
+   - if the spell bypasses every generic hook and depended exclusively on the adapter, that path reverts to the addon's native behavior until compatibility is restored.
+5. Adapter degradation must be observable through a WARN identifying the integration/adapter that could not be applied. Startup success must never be presented as proof that every optional adapter is active.
+6. One failed adapter must not disable other adapters in the same addon family or in other addon families.
+7. Friendly-fire classification, SUPPORT/HOSTILE overrides, ownership rules, healing behavior and summon semantics are unchanged by this resilience work.
 
-## Chosen architecture
+## Architecture
 
-Split mixin configuration by dependency boundary.
+### Core mixin config
 
-### Core config
-
-`magic_team.mixins.json`
+`magic_team.mixins.json` remains strict:
 
 - `required: true`
 - `injectors.defaultRequire: 1`
-- contains only Minecraft, Iron's Spellbooks and Magic Team core adapters
-- no class that targets Travel Optics, Geomancy Plus, Familiars or Cataclysm may remain here
+- only core Minecraft/Iron's/Magic Team hooks belong here
 
-This preserves fail-fast behavior for functionality that Magic Team cannot safely operate without.
+The core layer is the generic protection baseline. It must not be weakened merely to make optional compatibility more tolerant.
 
-### Optional configs
+### Optional addon configs
 
-Create one optional mixin config per integration family:
+The existing family configs remain independent:
 
 - `magic_team.traveloptics.mixins.json`
 - `magic_team.geomancyplus.mixins.json`
 - `magic_team.familiars.mixins.json`
 - `magic_team.cataclysm.mixins.json`
 
-Each optional config uses:
+Each optional config must use:
 
 ```json
 {
   "required": false,
-  "minVersion": "0.8",
-  "package": "com.gabri.magicteam.mixin",
-  "compatibilityLevel": "JAVA_17",
-  "refmap": "magic_team.refmap.json",
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }
 ```
 
-`defaultRequire` intentionally stays `1`. When a known adapter no longer matches the installed addon version, Mixin should report the failure instead of silently pretending compatibility exists. Because the config is optional, that adapter/config failure is not treated as a fatal Magic Team requirement.
+Optional injectors must not override this with a positive `require` unless the adapter is deliberately reclassified as core. A missing `@Inject`, `@Redirect` or similar target therefore becomes a no-op instead of an `InjectionError`.
 
-## Config membership
+This is the primary fallback mechanism: when the injection point is absent, the target addon's original method remains in control, while unrelated generic Magic Team hooks continue to operate normally.
 
-### Travel Optics
+### Diagnostic layer
 
-Move every `compat.traveloptics.*` adapter to `magic_team.traveloptics.mixins.json`.
+Fail-soft must not become silent failure. Magic Team must add an optional-adapter diagnostic layer that reports compatibility degradation as WARN.
 
-Also move legacy/root adapters that target Travel Optics classes, including `AnnihilationSpellMixin`, out of the core config.
+The diagnostic layer has two responsibilities:
 
-### Geomancy Plus
+1. Detect known optional adapter compatibility failures that can be determined safely at mixin/application time or startup without loading optional addon classes as hard dependencies.
+2. Emit a concise warning containing at least the addon family and adapter/mixin name, with wording that the adapter-specific protection is unavailable and generic/native fallback remains in effect.
 
-Move every `compat.geomancyplus.*` adapter to `magic_team.geomancyplus.mixins.json`.
+The diagnostic mechanism may use Mixin configuration/plugin/error-handler facilities and bytecode metadata where appropriate, but it must obey two constraints:
 
-### Familiars
+- it may downgrade failures only for mixins belonging to the optional addon configs;
+- it must never downgrade failures from `magic_team.mixins.json` or otherwise hide a broken core hook.
 
-Move every `compat.familiars.*` adapter to `magic_team.familiars.mixins.json`.
+If Mixin reports an optional adapter application error that is broader than a zero-match injector (for example a changed shadow, descriptor or target member), the optional integration layer must prefer WARN + skip/fallback rather than escalating that optional adapter into a server-wide startup failure, provided Mixin can safely continue transformation. Cases that cannot be safely recovered must be explicitly documented and covered by a regression test rather than silently claimed as fail-soft.
 
-### Cataclysm
+## Fallback semantics
 
-Move root Cataclysm adapters such as `CataclysmFlareBombMixin` and `CataclysmWitherHowitzerMixin`, plus Travel Optics adapters whose target classes are directly owned by Cataclysm only if they do not depend on Travel Optics-specific classes or behavior. The implementation must classify by actual runtime target/dependency, not merely by class name.
+A failed adapter does not disable Magic Team for the spell globally.
 
-Where an adapter targets a Travel Optics class that internally interoperates with Cataclysm, it remains in the Travel Optics config because Travel Optics is the actual target dependency.
+Conceptually:
 
-## Registration
+```text
+spell action
+  -> generic Magic Team hook still applies?
+       yes -> generic ally protection/classification still applies
+       no  -> addon native behavior
+  -> adapter-specific hook available?
+       yes -> apply the extra compatibility behavior
+       no  -> skip only that customization and WARN
+```
 
-All five mixin configs must be declared in the built JAR manifest through MixinGradle/manifest configuration so Forge loads them.
+Examples:
 
-The core config remains first. Optional configs are added individually rather than through a single catch-all optional config, so an incompatibility in Travel Optics does not suppress Familiars, Geomancy Plus or Cataclysm coverage.
+- A custom projectile whose eventual damage reaches a generic protected damage path can remain ally-safe even if a targeting adapter fails.
+- A teleport spell that requires an adapter solely to stop teleporting an ally may revert to native addon behavior if that adapter is unavailable.
+- A failed Travel Optics adapter must not disable working Travel Optics adapters for other spells.
 
 ## Optional adapter class rules
 
-Every class in an optional config must satisfy the existing architecture boundary:
+Optional adapters must continue to avoid hard addon dependencies:
 
-- use `@Pseudo` when targeting a class outside mandatory dependencies;
-- use `@Mixin(targets = "fully.qualified.Target", remap = false)` rather than importing the optional target class;
-- do not add direct imports from optional addon packages;
-- dependencies in method parameters, shadows and superclass types must remain limited to Minecraft/Forge/Iron's/Magic Team classes unless that adapter is intentionally compiled against a mandatory dependency.
+- use `@Pseudo` for optional target classes;
+- prefer string targets, e.g. `@Mixin(targets = "fully.qualified.Target", remap = false)`;
+- do not import optional addon classes into signatures or fields;
+- keep optional configs separate by actual runtime target dependency;
+- do not move an adapter into core merely to make its injection failure strict.
 
-Existing adapters that violate these rules must be corrected as part of the migration rather than merely moved to a new JSON file.
+## Runtime evidence driving the revision
 
-## Failure behavior
+The fail-soft behavior is required because real server boots exposed sequential optional failures that the previous design incorrectly allowed to become fatal:
 
-Expected runtime matrix:
+- Travel Optics Aqua Missiles: injector count mismatch;
+- Geomancy Plus Solar Storm: missing internal alliance call;
+- Iron's dispatch hook: compiled lambda layout mismatch (core issue, therefore fixed strictly rather than made optional);
+- Travel Optics Tidal Grasp: missing teleport redirect target;
+- Travel Optics Orbital Void: missing friendly-fire redirect target.
 
-| Situation | Expected result |
-| --- | --- |
-| Optional addon absent | Its adapters are skipped; server starts |
-| Optional addon present and compatible | Its adapters apply normally |
-| Optional addon present but a target method/descriptor changed | Mixin reports the incompatibility; optional integration is not a mandatory startup requirement |
-| One optional integration fails | Other optional integration configs remain independent |
-| Core Iron's/Minecraft mixin fails | Startup remains fail-fast because core config is required |
-| Known support spell ID disappears/renames | No classloading failure; the new/unknown ID defaults to hostile until classified or overridden |
+Orbital Void confirms that continuing to repair optional adapters one crash at a time is not sufficient; the failure policy itself must be corrected.
 
 ## Tests
 
-Use TDD.
+Use TDD. The revised contracts must first fail against the current repository and then pass after implementation.
 
-First extend the structural architecture contract so it fails against the current repository. The contract must verify:
+Structural requirements:
 
-1. `magic_team.mixins.json` remains `required: true` and `defaultRequire: 1`.
-2. Core config contains no `compat.traveloptics`, `compat.geomancyplus`, `compat.familiars`, `AnnihilationSpellMixin`, `CataclysmFlareBombMixin` or `CataclysmWitherHowitzerMixin` entries after migration.
-3. Each optional config exists, is `required: false`, and retains `defaultRequire: 1`.
-4. Each expected optional adapter is present in exactly one optional config.
-5. Optional `@Pseudo` mixins continue to have no hard imports from optional addon packages.
-6. `build.gradle`/manifest registration includes all optional configs.
+1. Core `magic_team.mixins.json` remains `required: true` with `defaultRequire: 1`.
+2. Every optional addon config remains `required: false` and uses `defaultRequire: 0`.
+3. No optional adapter declares a positive injector `require` that can reintroduce a fatal zero-match failure.
+4. Optional adapters remain separated from core and avoid direct optional-addon imports.
+5. All optional configs remain registered in the built JAR.
+6. A regression fixture representing a missing optional injection point must complete without a fatal requirement.
+7. Diagnostic behavior must be tested so a degraded optional adapter produces a WARN-level compatibility signal rather than being silently treated as healthy.
+8. Core mixin failure semantics must remain strict in the contracts.
+9. Existing friendly-fire policy, command/config, Familiars, architecture and runtime-crash regression contracts must continue to pass.
+10. Forge Compile must pass and the generated refmap must remain present.
 
-Verify the contract fails before production changes, then migrate the configs and registration until Structural Contracts pass.
+Real runtime verification remains required after automated checks: boot the same Arclight/Forge modpack that exposed the failures and confirm that incompatible optional adapters no longer stop startup.
 
-Finally run Forge Compile and verify the generated refmap is still present. The compile check proves source/config packaging consistency; it does not replace real runtime testing against missing, compatible and deliberately incompatible addon versions.
+## Success criteria
+
+The work is complete when:
+
+- an installed optional addon can change an adapter injection point without producing a server-stopping `InjectionError` from Magic Team;
+- Magic Team logs a WARN for the degraded adapter/integration;
+- generic Magic Team protection continues wherever independently applicable;
+- the affected spell uses addon-native behavior only for the compatibility path that could not be adapted;
+- unrelated adapters continue working;
+- core Iron's/Minecraft failures remain strict;
+- automated contracts and Forge Compile pass;
+- the real Arclight smoke test reaches normal server startup past the previously failing optional adapters.
 
 ## Out of scope
 
-- Automatically supporting arbitrary future addon method layouts.
-- Silently falling back to unprotected friendly-fire behavior without a log signal.
+- Automatically reverse-engineering arbitrary future addon implementations.
+- Guaranteeing ally protection for a spell whose only protection path was the failed optional adapter.
+- Turning core Iron's hooks into optional hooks.
 - Changing spell classification semantics.
-- Making Iron's Spellbooks or Babel Core optional.
-- Broad refactors unrelated to optional compatibility loading.
+- Treating a clean startup as proof that every optional adapter is compatible.
