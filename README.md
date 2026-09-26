@@ -6,19 +6,23 @@ Scoreboard alliance and vanilla friendly fire are separate from Magic Team's spe
 
 ## How It Works
 
-Magic-Team uses a layered protection model:
+Magic-Team uses a global-first layered protection model:
 
-1. **Target Validation**: hostile spells are blocked from selecting protected allies.
-2. **Effect Validation**: hostile spell effects are filtered before they apply to protected allies.
-3. **Damage Validation**: spell damage, projectiles, AOEs and supported addon paths use the same Magic Team protection policy.
-4. **Team Resolution**: Babel Core resolves root owners for summons, projectiles and related entities.
-5. **Admin Overrides**: every registered Iron's spell can be explicitly treated as `support` or `hostile`; spells without an override use Magic Team's built-in classification.
+1. **Cast/Target Context**: normal Iron's casts and standard `TargetEntityCastData` selection are handled centrally, including addon overrides that use the Iron's spell API.
+2. **Persistent Attribution**: entities, projectiles, AOEs and delayed MobEffects created by a spell can retain caster/spell behavior after the original cast stack ends.
+3. **Effect Validation**: hostile spell effects are filtered before they apply to protected allies, including delayed attributed effects.
+4. **Damage Validation**: Iron's `SpellDamageSource` is preferred when available; attributed custom/delayed entities fall back to the same global policy.
+5. **Common Side Effects**: attributed hostile magic also gates shared forced-movement, fire and effect-removal paths without naming individual spells.
+6. **Team Resolution**: Babel Core resolves root owners for summons, projectiles and related entities.
+7. **Admin Overrides**: every registered Iron's spell can be explicitly treated as `support` or `hostile`; spells without an override use Magic Team's built-in classification.
 
 ## Features
 
 * **Server-Side Only**: players do not need Magic Team or Babel Core installed on the client when no separate client-side Babel consumer is present.
 * **Global Runtime Toggle**: disable all Magic Team gameplay filtering without removing the mod or restarting the server.
 * **Magic-Only Ally Protection**: hostile magic is blocked against allies while Magic Team is enabled, independently from vanilla `/team friendlyFire`.
+* **Global-First Addon Coverage**: addons that follow normal Iron's cast/projectile/AOE/effect paths usually require no spell-specific Magic Team adapter.
+* **Delayed Interaction Attribution**: custom entities and MobEffects can preserve the original caster/spell classification across later ticks.
 * **Spell Overrides**: admins can override any registered Iron's/addon spell as `support` or `hostile`.
 * **Registry-Aware Autocomplete**: command suggestions include all spells currently registered in the Iron's spell registry, including normal addons.
 * **Configurable Feedback**: the blocked-action message accepts plain text or vanilla tellraw-style JSON components.
@@ -91,9 +95,11 @@ Malformed JSON is rejected instead of being saved.
 * **Server Dependencies**: Iron's Spells 'n Spellbooks and Babel Core
 * **Side**: Server-side
 
-Magic Team 2.4.0 contains explicit compatibility work for the audited Travel Optics, GTBC Geomancy Plus, Alshanex's Familiars and Cataclysm paths. These addon adapters are fail-soft: if an addon update changes an adapter-specific injection point, that adapter is skipped instead of aborting server startup. Generic Magic Team protection still applies wherever the spell reaches the normal core hooks; only the incompatible adapter-specific behavior falls back to the addon's native behavior. Magic Team logs compatibility degradation as a warning when Mixin reports a recoverable optional-adapter application error.
+Magic Team 2.4.0 uses the shared Iron's/global runtime pipeline as its primary addon-compatibility model. Normal addon spells should not require one Magic Team mixin per spell: cast context, selected targets, spell damage, projectiles, AOEs, delayed entities, delayed MobEffects and common hostile side effects are handled by shared hooks whenever enough attribution exists.
 
-A clean startup therefore does not prove every optional adapter matched the installed addon version. Addons that register normal `AbstractSpell` entries still appear in spell command autocomplete even when no special gameplay adapter is required.
+A small optional compatibility layer remains only for mechanisms outside that pipeline, such as item/armor abilities, Forge-event retaliation and transactions where blocking final damage would still leave another offensive side effect. Those configs are `required:false` with zero required injector matches. A missing/changed optional injection point therefore does not become a fatal 0/1 match failure. Prepare-time adapter failures can be skipped with a warning; apply-time transformation failures preserve Mixin's own safety action instead of forcing the server to continue with a potentially partially transformed class.
+
+The previous fragile per-spell redirects, including the Orbital Void redirect that depended on a specific addon-internal `isAlliedTo` call, are no longer part of the normal architecture. Addons that register normal `AbstractSpell` entries continue to appear in spell command autocomplete without needing a dedicated gameplay adapter.
 
 ## Why This Mod?
 
