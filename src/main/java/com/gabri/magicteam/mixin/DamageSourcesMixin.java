@@ -1,5 +1,8 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicAttribution;
+import com.gabri.magicteam.util.MagicAttributionIndex;
+import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
@@ -26,23 +29,46 @@ public class DamageSourcesMixin {
     }
 
     /**
-     * Blocks hostile spell damage between distinct allies whenever Magic Team is enabled.
-     * Support-classified spells keep their existing ally-allowed behavior.
+     * Iron's native SpellDamageSource is preferred evidence. Persistent generic
+     * attribution is only consulted as a fallback for delayed/custom entities.
      */
     @Inject(method = "applyDamage", at = @At("HEAD"), cancellable = true, remap = false)
-    private static void onApplyDamage(Entity target, float baseAmount, net.minecraft.world.damagesource.DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
-        if (!TeamUtils.isEnabled()) {
+    private static void onApplyDamage(Entity target,
+                                      float baseAmount,
+                                      net.minecraft.world.damagesource.DamageSource damageSource,
+                                      CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled() || damageSource == null || target == null) {
             return;
         }
 
         Entity attacker = damageSource.getEntity();
-        if (attacker == null || target == null) {
+        if (attacker == null) {
+            attacker = damageSource.getDirectEntity();
+        }
+        if (attacker == null) {
             return;
         }
 
-        if (damageSource instanceof SpellDamageSource spellDamageSource
-                && TeamUtils.shouldBlockMagicDamage(attacker, target, spellDamageSource.spell())) {
-            TeamUtils.sendBlockedMessage(attacker);
+        io.redspace.ironsspellbooks.api.spells.AbstractSpell spell = null;
+        if (damageSource instanceof SpellDamageSource spellDamageSource) {
+            spell = spellDamageSource.spell();
+        }
+
+        MagicAttribution attribution = spell == null
+                ? MagicAttributionIndex.get(attacker, attacker.level().getGameTime())
+                : null;
+
+        if (spell == null && attribution == null) {
+            return;
+        }
+
+        if (TeamUtils.shouldBlockMagicDamage(
+                attacker,
+                target,
+                spell,
+                attribution,
+                MagicTeamEffectContext.getInteractionType())) {
+            TeamUtils.sendBlockedMessage(TeamUtils.resolveMagicSource(attacker, attribution));
             cir.setReturnValue(false);
         }
     }
