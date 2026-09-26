@@ -354,14 +354,16 @@ public final class MagicTeamCommands {
             return new ResolvedSpell(normalizeSpellId(spell.getSpellId()), spell);
         }
 
+        final String path;
         if (normalized.startsWith("minecraft:")) {
-            normalized = normalized.substring("minecraft:".length());
+            path = normalized.substring("minecraft:".length());
         } else if (normalized.contains(":")) {
             source.sendFailure(Component.literal("Spell não registrada: " + normalized));
             return null;
+        } else {
+            path = normalized;
         }
 
-        String path = normalized;
         List<AbstractSpell> byPath = SpellRegistry.REGISTRY.get().getValues().stream()
                 .filter(spell -> pathOf(spell.getSpellId()).equals(path))
                 .toList();
