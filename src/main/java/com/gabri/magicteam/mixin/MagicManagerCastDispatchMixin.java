@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class MagicManagerCastDispatchMixin {
 
     @Redirect(
-            method = "tick",
+            method = "lambda$tick$0",
             at = @At(
                     value = "INVOKE",
                     target = "Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;onServerCastTick(Lnet/minecraft/world/level/Level;ILnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;)V"
