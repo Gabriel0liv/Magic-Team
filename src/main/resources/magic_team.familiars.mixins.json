@@ -6,13 +6,6 @@
   "refmap": "magic_team.refmap.json",
   "plugin": "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin",
   "mixins": [
-    "compat.familiars.HikenFriendlyFireMixin",
-    "compat.familiars.IllusionistDecoyContextMixin",
-    "compat.familiars.MayhemDirectHitFriendlyFireMixin",
-    "compat.familiars.DragonEggFriendlyFireMixin",
-    "compat.familiars.LullabyFriendlyFireMixin",
-    "compat.familiars.SonataFriendlyFireMixin",
-    "compat.familiars.HarpExplosionFriendlyFireMixin",
     "compat.familiars.ServerEventsRetaliationFriendlyFireMixin"
   ],
   "client": [],
