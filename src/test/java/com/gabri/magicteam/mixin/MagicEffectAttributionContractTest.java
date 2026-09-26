@@ -39,7 +39,13 @@ public final class MagicEffectAttributionContractTest {
                 "effect tick must recover persisted attribution");
         check(effectMixin.contains("MagicTeamEffectContext.push"),
                 "effect tick must re-enter magic context");
-        check(effectMixin.contains("finally") && effectMixin.contains("MagicTeamEffectContext.pop"),
+        check(effectMixin.contains("at = @At(\"HEAD\")") && effectMixin.contains("at = @At(\"RETURN\")"),
+                "effect attribution must wrap MobEffectInstance.tick at method boundaries");
+        check(!effectMixin.contains("@Redirect"),
+                "effect attribution must not depend on an internal applyEffectTick invocation");
+        check(!effectMixin.contains("target = \"Lnet/minecraft/world/effect/MobEffect;applyEffectTick"),
+                "Arclight may rewrite MobEffectInstance.tick internals; do not target applyEffectTick bytecode");
+        check(effectMixin.contains("MagicTeamEffectContext.pop"),
                 "effect tick context must be released reliably");
         check(sideEffects.contains("MagicEffectAttributionIndex.remove"),
                 "explicit effect removal must clear stale attribution");
