@@ -18,6 +18,13 @@ public abstract class LivingEntityMagicSideEffectMixin {
             cancellable = true
     )
     private void magicTeam$gateRemoveEffect(MobEffect effect, CallbackInfoReturnable<Boolean> cir) {
+        // Removing a harmful effect is a beneficial cleanse. Mixed spells may
+        // both cleanse allies and harm enemies, so classify the concrete side
+        // effect rather than blindly inheriting the spell-wide HOSTILE label.
+        if (effect == null || !effect.isBeneficial()) {
+            return;
+        }
+
         LivingEntity target = (LivingEntity) (Object) this;
         if (MagicSideEffectPolicy.shouldBlock(target)) {
             cir.setReturnValue(false);
