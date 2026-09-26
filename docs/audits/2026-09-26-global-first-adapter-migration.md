@@ -13,12 +13,14 @@ The remaining optional mixins are exceptions for behavior that is not safely rep
 
 The removed adapter families are replaced by these shared mechanisms:
 
-- `AbstractSpellMixin`: cast context and hostile `TargetEntityCastData` gate.
-- `DamageSourcesMixin` and `LivingEntityMixin`: final hostile damage/effect enforcement.
-- `EntityMagicAttributionMixin`: persistent attribution for spawned entities and delayed entity ticks.
-- `MobEffectInstanceMagicAttributionMixin` + `MagicEffectAttributionIndex`: delayed effect attribution, including Rend-like periodic effects.
+- `MagicTargetingPolicy`: one addon-neutral `TargetEntityCastData` gate reused by player pre-cast/release, player channel ticks and mob virtual spell dispatch.
+- `AbstractSpellMixin`, `MagicManagerCastDispatchMixin` and `AbstractSpellCastingMobDispatchMixin`: establish spell context before addon overrides execute, including overrides that never call `super`.
+- `DamageSourcesMixin` and `LivingEntityMixin`: final hostile damage/effect enforcement, preferring Iron's `SpellDamageSource` and falling back to persistent attribution when native spell metadata is absent.
+- `EntityMagicAttributionMixin`: captures attribution at the shared server entity-spawn boundary and re-enters it around the stable `ServerLevel.tickNonPassenger` method boundary. This avoids depending on addon entity classes or invocation layout inside the tick method.
+- `MobEffectInstanceMagicAttributionMixin` + `MagicEffectAttributionIndex`: delayed effect attribution, including Rend-like periodic effects. Attribution follows the actual effect lifetime and is removed when effects are removed.
 - `EntityMixin`: Babel alliance semantics for proven magic interactions regardless of addon namespace.
-- `EntityMagicSideEffectMixin` / `LivingEntityMagicSideEffectMixin`: common hostile movement, fire and effect-removal side effects.
+- `MagicSideEffectPolicy`, `EntityMagicSideEffectMixin` and `LivingEntityMagicSideEffectMixin`: common hostile movement, fire and effect-removal side effects. Concrete beneficial operations such as extinguishing fire or removing a harmful effect remain allowed.
+- `AreaEffectCloudMixin` and `ThrownPotionMixin`: plain vanilla potion/cloud behavior remains outside Magic Team, while potion/cloud entities created inside an attributed spell retain the original magic context.
 
 Notably, `OrbitalVoidFriendlyFireMixin` is removed rather than made more tolerant; the fragile 0/1 redirect that caused the runtime crash is no longer part of the architecture.
 
@@ -56,6 +58,18 @@ Every entry below is a `GLOBAL_FIRST_EXCEPTION` and remains in a `required:false
 
 No Cataclysm-specific adapter remains registered. Spawned projectiles/entities are handled by generic magic attribution and final global gates.
 
+## Optional-adapter failure semantics
+
+The optional configs remain `required:false` with `defaultRequire:0`, so normal zero-match injector drift does not turn an adapter into a fatal 0/1 injection requirement.
+
+`OptionalAddonMixinErrorHandler` is deliberately conservative:
+
+- prepare-time failure of an optional adapter can degrade to `WARN`, because the adapter can be skipped before transformation;
+- apply-time failure is logged but preserves Mixin's original action, because forcing continuation after transformation has begun could leave the target class partially transformed;
+- core Magic Team mixins are never downgraded by this handler.
+
+Therefore fail-soft applies only where Mixin can safely continue; it is not a blanket instruction to ignore every transformation error.
+
 ## Removed categories
 
 The migration removed per-spell/per-projectile adapters for normal target filtering, direct spell damage, standard projectile/AOE behavior, delayed magic entities, delayed MobEffects and common hostile side effects. This includes the previous Orbital Void, Aqua Missiles, Tidal Grasp, Solar Storm, Hiken and numerous Travel Optics extended-projectile adapters.
@@ -64,4 +78,4 @@ The migration removed per-spell/per-projectile adapters for normal target filter
 
 The retained Reversal and Spirit Damage Helper adapters are deliberately conservative candidates for future removal. If local Forge/Arclight testing confirms that their effects always inherit `MagicEffectAttributionIndex` context, they should be removed rather than maintained indefinitely.
 
-Runtime validation should focus on mechanism classes rather than exhaustive spell lists: direct hostile/support spells, standard targeting, projectile, AOE, delayed entity, delayed effect/Rend-like damage, summon/root-owner, forced movement/fire/effect removal, one item/armor exception, and Magic Team disabled mode.
+Runtime validation should focus on mechanism classes rather than exhaustive spell lists: direct hostile/support spells, standard targeting, projectile, AOE, delayed entity, delayed effect/Rend-like damage, summon/root-owner, attributed potion/cloud, forced movement/fire/effect removal, one item/armor exception, and Magic Team disabled mode.
