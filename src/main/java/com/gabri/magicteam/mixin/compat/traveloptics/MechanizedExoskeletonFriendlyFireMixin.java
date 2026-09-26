@@ -13,7 +13,6 @@ public abstract class MechanizedExoskeletonFriendlyFireMixin {
     @Redirect(
             method = "findMissileTarget(Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/entity/LivingEntity;",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z", remap = false),
-            require = 2,
             remap = false
     )
     private boolean magicTeam$useFriendlyFirePolicy(Entity target, Entity player) {
