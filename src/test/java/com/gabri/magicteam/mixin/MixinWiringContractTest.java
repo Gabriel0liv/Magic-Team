@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 /** Dependency-free structural regression checks for global-first mixin wiring. */
 public final class MixinWiringContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final List<Path> MIXIN_CONFIGS = List.of(
             Path.of("src/main/resources/magic_team.mixins.json"),
             Path.of("src/main/resources/magic_team.traveloptics.mixins.json"),
@@ -65,13 +66,21 @@ public final class MixinWiringContractTest {
     }
 
     private static void globalTargetGateIsWired() throws IOException {
-        String source = Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java"));
-        check(source.contains("TargetEntityCastData"),
-                "standard Iron's selected-target data must be handled globally");
-        check(source.contains("magicTeam$cancelProtectedTarget"),
-                "AbstractSpell must centralize targeted hostile spell filtering");
-        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
-                "global target gate must use central Magic Team policy");
+        String policy = Files.readString(UTIL_ROOT.resolve("MagicTargetingPolicy.java"));
+        String spell = Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java"));
+        String playerTick = Files.readString(MIXIN_ROOT.resolve("MagicManagerCastDispatchMixin.java"));
+        String mob = Files.readString(MIXIN_ROOT.resolve("AbstractSpellCastingMobDispatchMixin.java"));
+
+        check(policy.contains("TargetEntityCastData"),
+                "standard Iron's selected-target data must be handled by shared policy");
+        check(policy.contains("TeamUtils.shouldBlockFriendlyFire"),
+                "global target policy must use central Magic Team policy");
+        check(spell.contains("MagicTargetingPolicy.shouldBlockSelectedTarget"),
+                "AbstractSpell player dispatch must use shared target policy");
+        check(playerTick.contains("MagicTargetingPolicy.shouldBlockSelectedTarget"),
+                "player channel tick dispatch must use shared target policy");
+        check(mob.contains("MagicTargetingPolicy.shouldBlockSelectedTarget"),
+                "mob virtual dispatch must use shared target policy");
         check(!Files.exists(MIXIN_ROOT.resolve("compat/traveloptics/OrbitalVoidFriendlyFireMixin.java")),
                 "Orbital Void must not regain a fragile spell-specific target redirect");
         check(!Files.exists(MIXIN_ROOT.resolve("compat/traveloptics/TidalGraspFriendlyFireMixin.java")),
