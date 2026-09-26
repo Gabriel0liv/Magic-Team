@@ -55,7 +55,7 @@ public abstract class EntityMagicAttributionMixin {
         }
 
         ServerLevel level = (ServerLevel) (Object) this;
-        MagicAttribution attribution = MagicAttributionIndex.get(entity, level.getGameTime());
+        MagicAttribution attribution = MagicAttributionIndex.refresh(entity, level.getGameTime());
         if (attribution == null) {
             ticker.accept(rawEntity);
             return;
