@@ -4,6 +4,7 @@
   "package": "com.gabri.magicteam.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "magic_team.refmap.json",
+  "plugin": "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin",
   "mixins": [
     "compat.familiars.HikenFriendlyFireMixin",
     "compat.familiars.IllusionistDecoyContextMixin",
@@ -16,6 +17,6 @@
   ],
   "client": [],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }
