@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * addon classes and live entity instances are never retained by the tracker.</p>
  */
 public final class MagicAttributionIndex {
+    public static final long ACTIVE_ENTITY_TTL_TICKS = 20L * 60L * 5L;
+
     private static final Map<UUID, MagicAttribution> ATTRIBUTIONS = new ConcurrentHashMap<>();
 
     private MagicAttributionIndex() {
@@ -52,6 +54,22 @@ public final class MagicAttributionIndex {
         }
 
         return attribution;
+    }
+
+    /**
+     * Keeps attribution alive while the attributed entity is actively ticking.
+     * This avoids a fixed lifetime for long-lived summons while still allowing
+     * abandoned/unloaded entries to expire naturally.
+     */
+    public static MagicAttribution refresh(Entity entity, long currentTick) {
+        MagicAttribution attribution = get(entity, currentTick);
+        if (attribution == null) {
+            return null;
+        }
+
+        MagicAttribution refreshed = attribution.withExpiry(currentTick + ACTIVE_ENTITY_TTL_TICKS);
+        record(entity, refreshed);
+        return refreshed;
     }
 
     public static void remove(Entity entity) {
