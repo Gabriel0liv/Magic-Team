@@ -34,17 +34,10 @@ public final class MagicEffectAttributionIndex {
             return;
         }
 
-        long effectExpiry;
         int duration = effectInstance.getDuration();
-        if (duration < 0 || attribution.expiresAtTick() == Long.MAX_VALUE) {
-            effectExpiry = Long.MAX_VALUE;
-        } else {
-            effectExpiry = currentTick + Math.max(EXPIRY_GRACE_TICKS, (long) duration + EXPIRY_GRACE_TICKS);
-        }
-
-        long expiresAt = attribution.expiresAtTick() == Long.MAX_VALUE || effectExpiry == Long.MAX_VALUE
+        long expiresAt = duration < 0
                 ? Long.MAX_VALUE
-                : Math.max(attribution.expiresAtTick(), effectExpiry);
+                : currentTick + Math.max(1L, (long) duration) + EXPIRY_GRACE_TICKS;
 
         ATTRIBUTIONS.put(
                 new Key(target.getUUID(), effectId),
@@ -81,6 +74,14 @@ public final class MagicEffectAttributionIndex {
             return;
         }
         ATTRIBUTIONS.remove(new Key(target.getUUID(), effectId(effect)));
+    }
+
+    public static void removeAll(LivingEntity target) {
+        if (target == null) {
+            return;
+        }
+        UUID targetId = target.getUUID();
+        ATTRIBUTIONS.keySet().removeIf(key -> key.targetId().equals(targetId));
     }
 
     public static void cleanup(long currentTick) {
