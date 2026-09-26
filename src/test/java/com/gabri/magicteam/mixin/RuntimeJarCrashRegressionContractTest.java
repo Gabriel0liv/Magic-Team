@@ -17,6 +17,7 @@ public final class RuntimeJarCrashRegressionContractTest {
         fragileSpellRedirectsStayRemoved();
         standardTargetedSpellsUseSharedGate();
         delayedEntitiesUseGenericAttribution();
+        effectAttributionAvoidsArclightInternalRedirect();
         optionalTravelOpticsLayerRemainsFailSoft();
     }
 
@@ -65,6 +66,16 @@ public final class RuntimeJarCrashRegressionContractTest {
                 "delayed entities must retain generic magic attribution");
         check(effect.contains("MagicEffectAttributionIndex.get"),
                 "delayed MobEffect ticks must recover generic magic attribution");
+    }
+
+    private static void effectAttributionAvoidsArclightInternalRedirect() throws Exception {
+        String effect = Files.readString(MIXIN_ROOT.resolve("MobEffectInstanceMagicAttributionMixin.java"));
+        check(!effect.contains("@Redirect"),
+                "MobEffectInstance attribution must not redirect transformed tick internals");
+        check(!effect.contains("applyEffectTick(Lnet/minecraft/world/entity/LivingEntity;I)V"),
+                "Arclight can remove/rewrite the applyEffectTick invocation inside MobEffectInstance.tick");
+        check(effect.contains("at = @At(\"HEAD\")") && effect.contains("at = @At(\"RETURN\")"),
+                "MobEffect attribution must wrap the stable tick method boundary instead");
     }
 
     private static void optionalTravelOpticsLayerRemainsFailSoft() throws Exception {
