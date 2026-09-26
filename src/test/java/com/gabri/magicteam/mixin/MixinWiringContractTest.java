@@ -43,10 +43,13 @@ public final class MixinWiringContractTest {
         Set<String> registered = readAllMixinRegistrations();
         check(registered.contains("EntityMagicAttributionMixin"), "global entity attribution mixin is not registered");
         check(source.contains("addFreshEntity"), "entity attribution must capture spawned magic entities");
-        check(source.contains("tickNonPassenger"), "entity attribution must re-enter context during delayed ticks");
+        check(source.contains("method = \"tickNonPassenger\"")
+                        && source.contains("@At(\"HEAD\")")
+                        && source.contains("@At(\"RETURN\")"),
+                "entity attribution must wrap the stable tickNonPassenger method boundary");
         check(source.contains("MagicAttributionIndex.refresh"), "active attributed entities must refresh TTL");
-        check(source.contains("finally") && source.contains("MagicTeamEffectContext.pop"),
-                "entity attribution context must always be released");
+        check(source.contains("MAGIC_TEAM_TICK_SCOPES") && source.contains("MagicTeamEffectContext.pop"),
+                "paired entity tick scope must only pop contexts it actually pushed");
     }
 
     private static void globalEffectAttributionIsWired() throws IOException {
