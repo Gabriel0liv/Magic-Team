@@ -9,15 +9,17 @@ import java.nio.file.Path;
  */
 public final class RuntimeJarCrashRegressionContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path TRAVEL_CONFIG = Path.of("src/main/resources/magic_team.traveloptics.mixins.json");
 
     private RuntimeJarCrashRegressionContractTest() {
     }
 
     public static void main(String[] args) throws Exception {
         playerCastTickTargetsTheCompiledLambdaBody();
-        aquaMissilesMatchesTheSingleRuntimeAllianceCheck();
+        aquaMissilesUsesFailSoftRuntimePolicy();
         solarStormGuardsTheTargetPredicateWithoutRedirectingInternals();
         tidalGraspGuardsReleaseAtMethodBoundary();
+        orbitalVoidMissingRedirectIsNonFatal();
     }
 
     private static void playerCastTickTargetsTheCompiledLambdaBody() throws Exception {
@@ -29,14 +31,17 @@ public final class RuntimeJarCrashRegressionContractTest {
                 "redirecting MagicManager.tick misses the onServerCastTick invocation inside the compiled lambda");
     }
 
-    private static void aquaMissilesMatchesTheSingleRuntimeAllianceCheck() throws Exception {
+    private static void aquaMissilesUsesFailSoftRuntimePolicy() throws Exception {
         String source = Files.readString(
                 MIXIN_ROOT.resolve("compat/traveloptics/AquaMissilesFriendlyFireMixin.java"));
+        String config = Files.readString(TRAVEL_CONFIG);
 
-        check(source.contains("require = 1"),
-                "Travel Optics 6.3.0 Aqua Missiles has one matching alliance check in the runtime jar");
         check(!source.contains("require = 2"),
                 "requiring two Aqua Missiles redirect matches crashes Travel Optics 6.3.0 at startup");
+        check(!source.contains("require = 1"),
+                "Aqua Missiles should inherit the optional config's non-fatal injector requirement");
+        check(config.contains("\"defaultRequire\": 0"),
+                "Travel Optics runtime adapters must tolerate a missing injection target");
     }
 
     private static void solarStormGuardsTheTargetPredicateWithoutRedirectingInternals() throws Exception {
@@ -69,6 +74,19 @@ public final class RuntimeJarCrashRegressionContractTest {
                 "Tidal Grasp 6.3.0 runtime bytecode does not contain the assumed teleport redirect target");
         check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
                 "Tidal Grasp release guard must still use the Magic Team policy");
+    }
+
+    private static void orbitalVoidMissingRedirectIsNonFatal() throws Exception {
+        String config = Files.readString(TRAVEL_CONFIG);
+        String source = Files.readString(
+                MIXIN_ROOT.resolve("compat/traveloptics/OrbitalVoidFriendlyFireMixin.java"));
+
+        check(config.contains("\"compat.traveloptics.OrbitalVoidFriendlyFireMixin\""),
+                "Orbital Void compatibility must remain registered");
+        check(config.contains("\"defaultRequire\": 0"),
+                "Orbital Void 0/1 runtime mismatch must fall back instead of aborting startup");
+        check(source.contains("@Redirect("),
+                "Orbital Void adapter still owns its addon-specific alliance customization when compatible");
     }
 
     private static void check(boolean condition, String message) {
