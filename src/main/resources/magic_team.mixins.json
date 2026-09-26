@@ -12,6 +12,8 @@
     "EntityMixin",
     "EntityMagicAttributionMixin",
     "MobEffectInstanceMagicAttributionMixin",
+    "EntityMagicSideEffectMixin",
+    "LivingEntityMagicSideEffectMixin",
     "AreaEffectCloudMixin",
     "ThrownPotionMixin",
     "PoisonCloudMixin",
