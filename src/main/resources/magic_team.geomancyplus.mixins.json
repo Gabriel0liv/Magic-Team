@@ -6,7 +6,6 @@
   "refmap": "magic_team.refmap.json",
   "plugin": "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin",
   "mixins": [
-    "compat.geomancyplus.SolarStormFriendlyFireMixin",
     "compat.geomancyplus.TremorStepFriendlyFireMixin"
   ],
   "client": [],
