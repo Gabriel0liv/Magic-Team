@@ -33,7 +33,6 @@ public abstract class CursedWraithbladeFriendlyFireMixin {
                     target = "Lnet/minecraft/world/entity/LivingEntity;m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z",
                     remap = false
             ),
-            require = 2,
             remap = false
     )
     private boolean magicTeam$gateCursedBlastDamage(LivingEntity target,
