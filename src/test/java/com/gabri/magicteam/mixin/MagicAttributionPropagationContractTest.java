@@ -25,14 +25,18 @@ public final class MagicAttributionPropagationContractTest {
                 "spawn propagation must require proven active magic context");
         check(serverBoundary.contains("MagicAttributionIndex.record(entity, attribution)"),
                 "spawned entity attribution must be persisted by UUID");
-        check(serverBoundary.contains("tickNonPassenger"),
-                "attributed delayed entities must re-enter magic context during server tick");
+        check(serverBoundary.contains("method = \"tickNonPassenger\"")
+                        && serverBoundary.contains("@At(\"HEAD\")")
+                        && serverBoundary.contains("@At(\"RETURN\")"),
+                "delayed attribution must wrap the stable tickNonPassenger method boundary");
+        check(serverBoundary.contains("MAGIC_TEAM_TICK_SCOPES"),
+                "paired tick injections must track whether a magic context was actually pushed");
         check(serverBoundary.contains("MagicAttributionIndex.refresh(entity, level.getGameTime())"),
                 "active delayed entities must validate and refresh attribution lifetime");
-        check(serverBoundary.contains("if (!TeamUtils.isEnabled()"),
-                "disabled Magic Team must not create enforcement attribution");
-        check(serverBoundary.contains("finally"),
-                "re-entered entity context must always pop on normal/exceptional tick exit");
+        check(serverBoundary.contains("TeamUtils.isEnabled()"),
+                "disabled Magic Team must not create or re-enter enforcement attribution");
+        check(serverBoundary.contains("MagicTeamEffectContext.pop()"),
+                "re-entered entity context must be popped at the tick boundary");
 
         for (String shared : new String[]{projectile, aoe}) {
             check(shared.contains("MagicTeamEffectContext.currentAttribution()"),
