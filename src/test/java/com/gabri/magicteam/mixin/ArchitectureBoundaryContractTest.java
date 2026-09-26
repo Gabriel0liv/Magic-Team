@@ -38,6 +38,7 @@ public final class ArchitectureBoundaryContractTest {
         pseudoMixinsDoNotHardLinkOptionalAddons();
         allianceIdentityDoesNotDependOnFriendlyFire();
         magicProtectionDoesNotDependOnVanillaFriendlyFire();
+        coreUsesGlobalFirstHooks();
         optionalAddonMixinConfigsAreIsolatedAndFailSoft();
     }
 
@@ -88,21 +89,33 @@ public final class ArchitectureBoundaryContractTest {
                 "Magic Team hostile-magic protection must still use Babel alliance identity");
     }
 
+    private static void coreUsesGlobalFirstHooks() throws IOException {
+        String core = Files.readString(CORE_MIXINS);
+        for (String required : List.of(
+                "AbstractSpellMixin",
+                "EntityMagicAttributionMixin",
+                "MobEffectInstanceMagicAttributionMixin",
+                "EntityMagicSideEffectMixin",
+                "LivingEntityMagicSideEffectMixin",
+                "DamageSourcesMixin",
+                "LivingEntityMixin")) {
+            check(core.contains("\"" + required + "\""), "global-first core hook is missing: " + required);
+        }
+
+        for (String removed : List.of(
+                "compat.irons.AoeEntityFriendlyFireMixin",
+                "AnnihilationSpellMixin",
+                "CataclysmFlareBombMixin",
+                "CataclysmWitherHowitzerMixin")) {
+            check(!core.contains(removed), "obsolete adapter leaked into strict core config: " + removed);
+        }
+    }
+
     private static void optionalAddonMixinConfigsAreIsolatedAndFailSoft() throws IOException {
         String core = Files.readString(CORE_MIXINS);
         check(core.contains("\"required\": true"), "core mixin config must remain required");
         check(core.contains("\"defaultRequire\": 1"), "core mixin config must remain strict");
         check(!core.contains(OPTIONAL_PLUGIN), "optional fail-soft plugin must not attach to core config");
-
-        for (String forbidden : List.of(
-                "compat.traveloptics.",
-                "compat.geomancyplus.",
-                "compat.familiars.",
-                "AnnihilationSpellMixin",
-                "CataclysmFlareBombMixin",
-                "CataclysmWitherHowitzerMixin")) {
-            check(!core.contains(forbidden), "optional adapter leaked into required core config: " + forbidden);
-        }
 
         Set<String> allAdapters = new LinkedHashSet<>();
         for (Path configPath : OPTIONAL_CONFIGS) {
@@ -129,12 +142,13 @@ public final class ArchitectureBoundaryContractTest {
             }
         }
 
-        check(allAdapters.contains("AnnihilationSpellMixin"), "Travel Optics root adapter must remain optional");
-        check(allAdapters.contains("compat.geomancyplus.SolarStormFriendlyFireMixin"),
-                "Geomancy Plus adapters must remain optional");
-        check(allAdapters.contains("compat.familiars.HikenFriendlyFireMixin"),
-                "Familiars adapters must remain optional");
-        check(allAdapters.contains("CataclysmFlareBombMixin"), "Cataclysm root adapters must remain optional");
+        for (String obsolete : List.of(
+                "compat.traveloptics.OrbitalVoidFriendlyFireMixin",
+                "compat.geomancyplus.SolarStormFriendlyFireMixin",
+                "compat.familiars.HikenFriendlyFireMixin",
+                "CataclysmFlareBombMixin")) {
+            check(!allAdapters.contains(obsolete), "obsolete spell adapter is still registered: " + obsolete);
+        }
 
         String buildGradle = Files.readString(BUILD_GRADLE);
         for (String configName : List.of(
