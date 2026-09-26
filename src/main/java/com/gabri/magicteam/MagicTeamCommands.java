@@ -1,6 +1,5 @@
 package com.gabri.magicteam;
 
-import com.gabri.magicteam.command.SpellIdArgumentType;
 import com.gabri.magicteam.util.MagicTeamConfig;
 import com.gabri.magicteam.util.SpellBehavior;
 import com.gabri.magicteam.util.TeamUtils;
@@ -14,6 +13,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.fml.ModList;
 
@@ -87,33 +87,33 @@ public final class MagicTeamCommands {
                                         .executes(context -> resetMessage(context.getSource()))))
                         .then(Commands.literal("spell")
                                 .then(Commands.literal("info")
-                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
+                                        .then(Commands.argument("spell", ResourceLocationArgument.id())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .executes(context -> spellInfo(
                                                         context.getSource(),
-                                                        SpellIdArgumentType.getSpellId(context, "spell")
+                                                        ResourceLocationArgument.getId(context, "spell").toString()
                                                 ))))
                                 .then(Commands.literal("set")
-                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
+                                        .then(Commands.argument("spell", ResourceLocationArgument.id())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .then(Commands.literal("support")
                                                         .executes(context -> setSpellBehavior(
                                                                 context.getSource(),
-                                                                SpellIdArgumentType.getSpellId(context, "spell"),
+                                                                ResourceLocationArgument.getId(context, "spell").toString(),
                                                                 SpellBehavior.SUPPORT
                                                         )))
                                                 .then(Commands.literal("hostile")
                                                         .executes(context -> setSpellBehavior(
                                                                 context.getSource(),
-                                                                SpellIdArgumentType.getSpellId(context, "spell"),
+                                                                ResourceLocationArgument.getId(context, "spell").toString(),
                                                                 SpellBehavior.HOSTILE
                                                         )))))
                                 .then(Commands.literal("reset")
-                                        .then(Commands.argument("spell", SpellIdArgumentType.spellId())
+                                        .then(Commands.argument("spell", ResourceLocationArgument.id())
                                                 .suggests(SPELL_SUGGESTIONS)
                                                 .executes(context -> resetSpellBehavior(
                                                         context.getSource(),
-                                                        SpellIdArgumentType.getSpellId(context, "spell")
+                                                        ResourceLocationArgument.getId(context, "spell").toString()
                                                 ))))
                                 .then(Commands.literal("overrides")
                                         .executes(context -> listOverrides(context.getSource())))
@@ -354,20 +354,23 @@ public final class MagicTeamCommands {
             return new ResolvedSpell(normalizeSpellId(spell.getSpellId()), spell);
         }
 
-        if (normalized.contains(":")) {
+        if (normalized.startsWith("minecraft:")) {
+            normalized = normalized.substring("minecraft:".length());
+        } else if (normalized.contains(":")) {
             source.sendFailure(Component.literal("Spell não registrada: " + normalized));
             return null;
         }
 
+        String path = normalized;
         List<AbstractSpell> byPath = SpellRegistry.REGISTRY.get().getValues().stream()
-                .filter(spell -> pathOf(spell.getSpellId()).equals(normalized))
+                .filter(spell -> pathOf(spell.getSpellId()).equals(path))
                 .toList();
         if (byPath.isEmpty()) {
-            source.sendFailure(Component.literal("Spell não registrada: " + normalized));
+            source.sendFailure(Component.literal("Spell não registrada: " + path));
             return null;
         }
         if (byPath.size() > 1) {
-            source.sendFailure(Component.literal("ID ambíguo '" + normalized + "'. Use o ID completo com namespace."));
+            source.sendFailure(Component.literal("ID ambíguo '" + path + "'. Use o ID completo com namespace."));
             return null;
         }
 
