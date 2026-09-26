@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 public final class OptionalAddonFailSoftContractTest {
     private static final Path RESOURCE_ROOT = Path.of("src/main/resources");
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final Path CORE_CONFIG = RESOURCE_ROOT.resolve("magic_team.mixins.json");
     private static final List<Path> OPTIONAL_CONFIGS = List.of(
             RESOURCE_ROOT.resolve("magic_team.traveloptics.mixins.json"),
@@ -82,12 +83,12 @@ public final class OptionalAddonFailSoftContractTest {
         String handlerSource = Files.readString(handler);
         check(pluginSource.contains("Mixins.registerErrorHandlerClass"),
                 "optional config plugin must register the error handler before application");
-        check(handlerSource.contains("ErrorAction.WARN"),
-                "optional application failures must downgrade to WARN when Mixin can safely continue");
+        check(handlerSource.contains("return ErrorAction.WARN"),
+                "prepare-time optional failures must be skippable when safe");
+        check(handlerSource.contains("onApplyError") && handlerSource.contains("return action"),
+                "apply-time failures must preserve Mixin's original safety action");
         check(handlerSource.contains("isOptionalMixin"),
                 "error handler must explicitly classify optional adapters instead of downgrading all mixins");
-        check(handlerSource.contains("return action"),
-                "non-optional/core failures must preserve Mixin's original strict action");
     }
 
     private static void orbitalVoidRegressionIsRemovedFromOptionalLayer() throws Exception {
@@ -96,8 +97,8 @@ public final class OptionalAddonFailSoftContractTest {
                 "Orbital Void must not regain the fragile redirect that caused the 0/1 InjectionError");
         check(!Files.exists(MIXIN_ROOT.resolve("compat/traveloptics/OrbitalVoidFriendlyFireMixin.java")),
                 "obsolete Orbital Void adapter source must stay deleted");
-        check(Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java")).contains("TargetEntityCastData"),
-                "standard targeted spell protection must live in the global AbstractSpell layer");
+        check(Files.readString(UTIL_ROOT.resolve("MagicTargetingPolicy.java")).contains("TargetEntityCastData"),
+                "standard targeted spell protection must live in the shared global targeting layer");
     }
 
     private static Set<String> readMixinRegistrations(String json) {
