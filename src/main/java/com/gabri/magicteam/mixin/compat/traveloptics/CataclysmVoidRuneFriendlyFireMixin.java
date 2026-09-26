@@ -26,7 +26,6 @@ public abstract class CataclysmVoidRuneFriendlyFireMixin {
                     target = "Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z",
                     remap = false
             ),
-            require = 2,
             remap = false
     )
     private boolean magicTeam$scoreboardAwareAlliance(Entity source, Entity target) {
