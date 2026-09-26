@@ -30,6 +30,7 @@ jobs:
             src/test/java/com/gabri/magicteam/mixin/MixinWiringContractTest.java \
             src/test/java/com/gabri/magicteam/mixin/ArchitectureBoundaryContractTest.java \
             src/test/java/com/gabri/magicteam/mixin/FamiliarsCompatibilityContractTest.java \
+            src/test/java/com/gabri/magicteam/mixin/RuntimeJarCrashRegressionContractTest.java \
             src/test/java/com/gabri/magicteam/commands/CommandConfigContractTest.java
 
       - name: Run friendly-fire policy contract
@@ -40,6 +41,9 @@ jobs:
 
       - name: Run mixin wiring contract
         run: java -cp build/structural-contracts com.gabri.magicteam.mixin.MixinWiringContractTest
+
+      - name: Run runtime jar crash regression contract
+        run: java -cp build/structural-contracts com.gabri.magicteam.mixin.RuntimeJarCrashRegressionContractTest
 
       - name: Run architecture boundary contract
         run: java -cp build/structural-contracts com.gabri.magicteam.mixin.ArchitectureBoundaryContractTest
