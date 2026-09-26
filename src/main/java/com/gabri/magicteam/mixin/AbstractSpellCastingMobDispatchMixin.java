@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicTargetingPolicy;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -36,6 +37,10 @@ public abstract class AbstractSpellCastingMobDispatchMixin {
                                                 int spellLevel,
                                                 LivingEntity entity,
                                                 MagicData magicData) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
+            return;
+        }
+
         MagicTeamEffectContext.push(entity, spell, CastSource.MOB, magicTeam$interaction(spell));
         try {
             spell.onServerCastTick(level, spellLevel, entity, magicData);
@@ -58,6 +63,10 @@ public abstract class AbstractSpellCastingMobDispatchMixin {
                                             LivingEntity entity,
                                             CastSource castSource,
                                             MagicData magicData) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
+            return;
+        }
+
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
         try {
             spell.onCast(level, spellLevel, entity, castSource, magicData);
@@ -80,6 +89,10 @@ public abstract class AbstractSpellCastingMobDispatchMixin {
                                                int spellLevel,
                                                LivingEntity entity,
                                                MagicData magicData) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
+            return;
+        }
+
         MagicTeamEffectContext.push(entity, spell, CastSource.MOB, magicTeam$interaction(spell));
         try {
             spell.onServerPreCast(level, spellLevel, entity, magicData);
