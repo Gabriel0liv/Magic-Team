@@ -96,11 +96,11 @@ public class LivingEntityMixin {
     private void magicTeam$recordEffectAttributionWithSource(MobEffectInstance effectInstance,
                                                              Entity source,
                                                              CallbackInfoReturnable<Boolean> cir) {
-        if (!TeamUtils.isEnabled() || effectInstance == null || !cir.getReturnValueZ()) {
+        if (!TeamUtils.isEnabled() || effectInstance == null || source == null || !cir.getReturnValueZ()) {
             return;
         }
 
-        MagicAttribution attribution = MagicTeamEffectContext.currentAttribution();
+        MagicAttribution attribution = resolveAttribution(source);
         if (attribution == null) {
             return;
         }
