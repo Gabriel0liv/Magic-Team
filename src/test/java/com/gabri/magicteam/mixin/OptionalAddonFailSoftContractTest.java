@@ -2,6 +2,7 @@ package com.gabri.magicteam.mixin;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,15 +57,19 @@ public final class OptionalAddonFailSoftContractTest {
     }
 
     private static void optionalAdaptersCannotReintroduceFatalRequirements() throws Exception {
+        List<String> offenders = new ArrayList<>();
         for (Path configPath : OPTIONAL_CONFIGS) {
             for (String adapter : readMixinRegistrations(Files.readString(configPath))) {
                 Path source = MIXIN_ROOT.resolve(adapter.replace('.', '/') + ".java");
                 check(Files.isRegularFile(source), "optional adapter source is missing: " + adapter);
                 Matcher matcher = POSITIVE_REQUIRE.matcher(Files.readString(source));
-                check(!matcher.find(),
-                        "optional adapter must not declare a positive injector require: " + adapter);
+                if (matcher.find()) {
+                    offenders.add(adapter + " (require=" + matcher.group(1) + ")");
+                }
             }
         }
+        check(offenders.isEmpty(),
+                "optional adapters must not declare positive injector require values: " + offenders);
     }
 
     private static void diagnosticsDistinguishOptionalFromCore() throws Exception {
