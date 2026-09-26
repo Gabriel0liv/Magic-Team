@@ -6,6 +6,7 @@ import java.nio.file.Path;
 /** Structural regressions for runtime failures that motivated the global-first refactor. */
 public final class RuntimeJarCrashRegressionContractTest {
     private static final Path MIXIN_ROOT = Path.of("src/main/java/com/gabri/magicteam/mixin");
+    private static final Path UTIL_ROOT = Path.of("src/main/java/com/gabri/magicteam/util");
     private static final Path TRAVEL_CONFIG = Path.of("src/main/resources/magic_team.traveloptics.mixins.json");
 
     private RuntimeJarCrashRegressionContractTest() {
@@ -14,7 +15,7 @@ public final class RuntimeJarCrashRegressionContractTest {
     public static void main(String[] args) throws Exception {
         playerCastTickTargetsTheCompiledLambdaBody();
         fragileSpellRedirectsStayRemoved();
-        standardTargetedSpellsUseAbstractSpellGate();
+        standardTargetedSpellsUseSharedGate();
         delayedEntitiesUseGenericAttribution();
         optionalTravelOpticsLayerRemainsFailSoft();
     }
@@ -42,14 +43,19 @@ public final class RuntimeJarCrashRegressionContractTest {
                 "Orbital Void 0/1 redirect regression must not be reintroduced");
     }
 
-    private static void standardTargetedSpellsUseAbstractSpellGate() throws Exception {
-        String source = Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java"));
-        check(source.contains("TargetEntityCastData"),
+    private static void standardTargetedSpellsUseSharedGate() throws Exception {
+        String policy = Files.readString(UTIL_ROOT.resolve("MagicTargetingPolicy.java"));
+        String abstractSpell = Files.readString(MIXIN_ROOT.resolve("AbstractSpellMixin.java"));
+        String castTick = Files.readString(MIXIN_ROOT.resolve("MagicManagerCastDispatchMixin.java"));
+
+        check(policy.contains("TargetEntityCastData"),
                 "standard selected-target spells must be protected at the Iron's API boundary");
-        check(source.contains("magicTeam$cancelProtectedTarget"),
-                "target protection must be centralized in AbstractSpell");
-        check(source.contains("TeamUtils.shouldBlockFriendlyFire"),
+        check(policy.contains("TeamUtils.shouldBlockFriendlyFire"),
                 "global target gate must use the central policy");
+        check(abstractSpell.contains("MagicTargetingPolicy.shouldBlockSelectedTarget"),
+                "pre-cast/release dispatch must use the shared target gate");
+        check(castTick.contains("MagicTargetingPolicy.shouldBlockSelectedTarget"),
+                "channel-tick dispatch must not bypass the shared target gate");
     }
 
     private static void delayedEntitiesUseGenericAttribution() throws Exception {
