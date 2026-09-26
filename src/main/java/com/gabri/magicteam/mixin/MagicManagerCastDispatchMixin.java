@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicTargetingPolicy;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -29,6 +30,11 @@ public abstract class MagicManagerCastDispatchMixin {
                                                    int spellLevel,
                                                    LivingEntity entity,
                                                    MagicData magicData) {
+        if (MagicTargetingPolicy.shouldBlockSelectedTarget(level, entity, magicData, spell)) {
+            TeamUtils.sendBlockedMessage(entity);
+            return;
+        }
+
         CastSource castSource = magicData == null ? null : magicData.getCastSource();
         MagicTeamEffectContext.push(entity, spell, castSource, magicTeam$interaction(spell));
         try {
