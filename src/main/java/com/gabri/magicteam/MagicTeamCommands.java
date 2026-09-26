@@ -65,12 +65,11 @@ public final class MagicTeamCommands {
                                                 BoolArgumentType.getBool(context, "value")
                                         ))))
                         .then(Commands.literal("targetnotification")
-                                .then(Commands.literal("enabled")
-                                        .then(Commands.argument("value", BoolArgumentType.bool())
-                                                .executes(context -> setTargetNotificationEnabled(
-                                                        context.getSource(),
-                                                        BoolArgumentType.getBool(context, "value")
-                                                )))))
+                                .then(Commands.argument("value", BoolArgumentType.bool())
+                                        .executes(context -> setTargetNotificationEnabled(
+                                                context.getSource(),
+                                                BoolArgumentType.getBool(context, "value")
+                                        ))))
                         .then(Commands.literal("message")
                                 .then(Commands.literal("enabled")
                                         .then(Commands.argument("value", BoolArgumentType.bool())
