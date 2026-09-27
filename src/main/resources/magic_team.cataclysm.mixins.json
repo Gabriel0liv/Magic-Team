@@ -5,7 +5,10 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "magic_team.refmap.json",
   "plugin": "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin",
-  "mixins": [],
+  "mixins": [
+    "compat.cataclysm.FlareBombFriendlyFireMixin",
+    "compat.cataclysm.WitherHowitzerFriendlyFireMixin"
+  ],
   "client": [],
   "injectors": {
     "defaultRequire": 0
