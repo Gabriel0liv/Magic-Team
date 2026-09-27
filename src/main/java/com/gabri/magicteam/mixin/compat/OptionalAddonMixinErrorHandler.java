@@ -70,7 +70,8 @@ public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler 
         }
         return mixinName.startsWith(MIXIN_PREFIX + "compat.traveloptics.")
                 || mixinName.startsWith(MIXIN_PREFIX + "compat.geomancyplus.")
-                || mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.");
+                || mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.")
+                || mixinName.startsWith(MIXIN_PREFIX + "compat.cataclysm.");
     }
 
     private static String familyFor(String mixinName) {
@@ -85,6 +86,9 @@ public final class OptionalAddonMixinErrorHandler implements IMixinErrorHandler 
         }
         if (mixinName.startsWith(MIXIN_PREFIX + "compat.familiars.")) {
             return "Alshanex Familiars";
+        }
+        if (mixinName.startsWith(MIXIN_PREFIX + "compat.cataclysm.")) {
+            return "Cataclysm";
         }
         return "optional addon";
     }
