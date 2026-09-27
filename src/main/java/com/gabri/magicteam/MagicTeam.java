@@ -11,10 +11,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Main entry point for Magic Team mod.
- * This is a server-side mod that overrides Iron's Spells targeting.
- */
+/** Main entry point for the server-side Magic Team mod. */
 @Mod("magic_team")
 public class MagicTeam {
     public static final String MODID = "magic_team";
@@ -38,12 +35,10 @@ public class MagicTeam {
         }
 
         int depth = MagicTeamEffectContext.getDepth();
-        if (depth <= 0) {
-            return;
+        if (depth > 0) {
+            String context = MagicTeamEffectContext.describeCurrentContext();
+            LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
+            MagicTeamEffectContext.clear();
         }
-
-        String context = MagicTeamEffectContext.describeCurrentContext();
-        LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
-        MagicTeamEffectContext.clear();
     }
 }

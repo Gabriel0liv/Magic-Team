@@ -1,6 +1,9 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicAttribution;
+import com.gabri.magicteam.util.MagicAttributionIndex;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
+import com.gabri.magicteam.util.TeamUtils;
 import net.minecraft.world.entity.AreaEffectCloud;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,7 +15,17 @@ public class AreaEffectCloudMixin {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTickStart(CallbackInfo ci) {
-        MagicTeamEffectContext.pushVanillaPotion((AreaEffectCloud) (Object) this);
+        AreaEffectCloud cloud = (AreaEffectCloud) (Object) this;
+        MagicAttribution attribution = MagicTeamEffectContext.currentAttribution();
+        if (attribution == null && TeamUtils.isEnabled()) {
+            attribution = MagicAttributionIndex.get(cloud, cloud.level().getGameTime());
+        }
+
+        if (attribution != null) {
+            MagicTeamEffectContext.push(cloud, attribution);
+        } else {
+            MagicTeamEffectContext.pushVanillaPotion(cloud);
+        }
     }
 
     @Inject(method = "tick", at = @At("RETURN"))

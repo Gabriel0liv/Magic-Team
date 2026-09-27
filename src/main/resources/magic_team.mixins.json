@@ -6,18 +6,23 @@
   "refmap": "magic_team.refmap.json",
   "mixins": [
     "AbstractMagicProjectileMixin",
-    "AnnihilationSpellMixin",
     "AbstractSpellMixin",
+    "AbstractSpellCastingMobDispatchMixin",
     "AoeEntityMixin",
-    "CataclysmFlareBombMixin",
-    "CataclysmWitherHowitzerMixin",
     "EntityMixin",
+    "EntityMagicAttributionMixin",
+    "MobEffectInstanceMagicAttributionMixin",
+    "EntityMagicSideEffectMixin",
+    "LivingEntityMagicSideEffectMixin",
     "AreaEffectCloudMixin",
     "ThrownPotionMixin",
     "PoisonCloudMixin",
     "UtilsMixin",
     "DamageSourcesMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "MagicManagerCastDispatchMixin",
+    "CastCommandMixin",
+    "ImmolateEffectMixin"
   ],
   "client": [],
   "injectors": {

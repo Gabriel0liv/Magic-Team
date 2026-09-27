@@ -1,0 +1,124 @@
+name: Forge Compile
+
+on:
+  push:
+    branches:
+      - main
+      - 'agent/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Provide Babel Core API compile stub
+        shell: bash
+        run: |
+          # Babel Core is a private sibling repository and Magic Team intentionally
+          # consumes its local development jar. GITHUB_TOKEN is repository-scoped,
+          # so this compile-only job provides only the exact API surface Magic Team
+          # imports. This does not replace Babel runtime/integration testing.
+          mkdir -p src/main/java/com/gabri/babel/core/gameplay/entity
+          cat > src/main/java/com/gabri/babel/core/gameplay/entity/BabelEntityRelations.java <<'EOF'
+          package com.gabri.babel.core.gameplay.entity;
+
+          import net.minecraft.world.entity.Entity;
+
+          public final class BabelEntityRelations {
+              public static final BabelEntityRelations INSTANCE = new BabelEntityRelations();
+
+              private BabelEntityRelations() {
+              }
+
+              public Entity getRootOwner(Entity entity) {
+                  return entity;
+              }
+
+              public boolean areAllies(Entity a, Entity b) {
+                  return false;
+              }
+          }
+          EOF
+
+      - name: Clean Forge build
+        run: ./gradlew clean build --stacktrace
+
+      # Do not launch Forge/GameTest in this compile-only workflow. Magic Team declares
+      # Babel Core as a mandatory runtime mod, while this job intentionally injects only
+      # a Java API stub so the private sibling repository is not required to compile.
+      # A server launch here would therefore test an invalid runtime. Real Forge/Arclight
+      # integration is validated with the actual Babel Core jar and the gameplay matrix.
+
+      - name: Verify generated refmap
+        shell: bash
+        run: |
+          mapfile -t REFMAPS < <(find build -type f -name '*refmap*.json' -print)
+          if [ "${#REFMAPS[@]}" -eq 0 ]; then
+            echo 'No Mixin refmap was generated.' >&2
+            exit 1
+          fi
+          printf 'Generated refmap(s):\n'
+          printf ' - %s\n' "${REFMAPS[@]}"
+          for refmap in "${REFMAPS[@]}"; do
+            echo "===== $refmap ====="
+            cat "$refmap"
+          done
+
+          REFMAP=build/tmp/compileJava/magic_team.refmap.json
+          if [ ! -f "$REFMAP" ]; then
+            echo 'Expected magic_team.refmap.json was not generated.' >&2
+            exit 1
+          fi
+
+          python3 - "$REFMAP" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              refmap = json.load(handle)
+
+          mappings = refmap.get('mappings', {})
+          aoe = mappings.get('com/gabri/magicteam/mixin/compat/irons/AoeEntityFriendlyFireMixin', {})
+          expected_method = 'Lio/redspace/ironsspellbooks/entity/spells/AoeEntity;m_5603_(Lnet/minecraft/world/entity/Entity;)Z'
+          expected_call = 'Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z'
+
+          if aoe.get('canHitEntity(Lnet/minecraft/world/entity/Entity;)Z') != expected_method:
+              raise SystemExit('Iron AoeEntity#canHitEntity did not remap to runtime m_5603_')
+          if aoe.get('Lnet/minecraft/world/entity/Entity;isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z') != expected_call:
+              raise SystemExit('Entity#isAlliedTo did not remap to runtime m_7307_')
+
+          mob = mappings.get('com/gabri/magicteam/mixin/AbstractSpellCastingMobDispatchMixin', {})
+          expected_mob_tick = 'Lio/redspace/ironsspellbooks/entity/mobs/abstract_spell_casting_mob/AbstractSpellCastingMob;m_8024_()V'
+          if mob.get('customServerAiStep') != expected_mob_tick:
+              raise SystemExit('AbstractSpellCastingMob#customServerAiStep did not remap to runtime m_8024_')
+
+          print('Critical runtime mappings verified: AoeEntity m_5603_, Entity m_7307_, mob tick m_8024_.')
+          PY
+
+      - name: Upload built jar and refmap
+        uses: actions/upload-artifact@v4
+        with:
+          name: magic-team-forge-build
+          if-no-files-found: error
+          path: |
+            build/libs/*.jar
+            build/**/*refmap*.json
