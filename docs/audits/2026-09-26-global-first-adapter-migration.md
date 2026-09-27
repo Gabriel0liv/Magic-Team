@@ -5,7 +5,13 @@ Branch: `agent/friendly-fire-compat-2.3.3`
 
 ## Result
 
-Magic Team now treats shared Iron's/global hooks as the primary protection model. Spell-specific Travel Optics, Familiars, Geomancy Plus and Cataclysm adapters that only duplicated targeting, damage, effect, projectile, AOE or delayed-context behavior were removed.
+Magic Team treats shared Iron's/global hooks as the primary protection model. Spell-specific Travel Optics, Familiars and Geomancy Plus adapters that only duplicated targeting, damage, effect, projectile, AOE or delayed-context behavior were removed.
+
+A direct comparison against the published `magic_team-2.3.1.jar` identified three coverage paths that must not be lost merely because newer generic attribution exists:
+
+- Iron's `/cast` command can invoke `AbstractSpell#onCast` directly for non-player living entities, bypassing normal player/mob dispatch wrappers;
+- `ImmolateEffect#addImmolateStack` applies its effect without passing the afflicter to `LivingEntity#addEffect`, so the generic effect gate can otherwise lose the source outside an already-attributed spell scope;
+- Cataclysm Flare Bomb and Wither Howitzer are not Iron's spell entities and can be created outside a tracked spell context, so generic spawn attribution is not a complete replacement for the 2.3.1 impact bridge.
 
 The remaining optional mixins are exceptions for behavior that is not safely represented by the normal `AbstractSpell`/magic entity/effect pipeline, or for transactions where blocking final damage would still leave an offensive side effect behind.
 
@@ -15,6 +21,8 @@ The removed adapter families are replaced by these shared mechanisms:
 
 - `MagicTargetingPolicy`: one addon-neutral `TargetEntityCastData` gate reused by player pre-cast/release, player channel ticks and mob virtual spell dispatch.
 - `AbstractSpellMixin`, `MagicManagerCastDispatchMixin` and `AbstractSpellCastingMobDispatchMixin`: establish spell context before addon overrides execute, including overrides that never call `super`.
+- `CastCommandMixin`: preserves the published 2.3.1 global command-cast entry point for Iron's `CastCommand`, covering its direct `onCast` path.
+- `ImmolateEffectMixin`: preserves the published 2.3.1 afflicter bridge for the Iron's core Immolate helper when `addEffect` itself receives no source.
 - `DamageSourcesMixin` and `LivingEntityMixin`: final hostile damage/effect enforcement, preferring Iron's `SpellDamageSource` and falling back to persistent attribution when native spell metadata is absent.
 - `EntityMagicAttributionMixin`: captures attribution at the shared server entity-spawn boundary and re-enters it around the stable `ServerLevel.tickNonPassenger` method boundary. This avoids depending on addon entity classes or invocation layout inside the tick method.
 - `MobEffectInstanceMagicAttributionMixin` + `MagicEffectAttributionIndex`: delayed effect attribution, including Rend-like periodic effects. Attribution follows the actual effect lifetime and is removed when effects are removed.
@@ -56,7 +64,10 @@ Every entry below is a `GLOBAL_FIRST_EXCEPTION` and remains in a `required:false
 
 ### Cataclysm
 
-No Cataclysm-specific adapter remains registered. Spawned projectiles/entities are handled by generic magic attribution and final global gates.
+- `compat.cataclysm.FlareBombFriendlyFireMixin` — **GLOBAL_FIRST_EXCEPTION:** preserved from the published 2.3.1 behavior. Flare Bomb is a Cataclysm `ThrowableProjectile`, not an Iron's magic entity, and can be created outside a tracked spell scope; the adapter re-enters hostile magic context only for its impact logic.
+- `compat.cataclysm.WitherHowitzerFriendlyFireMixin` — **GLOBAL_FIRST_EXCEPTION:** same published-2.3.1 parity requirement for Wither Howitzer, which can execute independently of Iron's spell attribution.
+
+These two Cataclysm exceptions do not represent a return to per-spell adaptation. They preserve two non-Iron's projectile entry points that the published 2.3.1 JAR explicitly handled and that generic spell-spawn attribution cannot prove when the projectile originates outside Magic Team context.
 
 ## Optional-adapter failure semantics
 
@@ -74,8 +85,10 @@ Therefore fail-soft applies only where Mixin can safely continue; it is not a bl
 
 The migration removed per-spell/per-projectile adapters for normal target filtering, direct spell damage, standard projectile/AOE behavior, delayed magic entities, delayed MobEffects and common hostile side effects. This includes the previous Orbital Void, Aqua Missiles, Tidal Grasp, Solar Storm, Hiken and numerous Travel Optics extended-projectile adapters.
 
+The published 2.3.1 `AnnihilationSpellMixin` remains removed because the current player/mob virtual dispatch wraps the entire addon spell override before `applyAoEDamageAndExplosion` executes, so the specific helper wrapper is redundant. Cataclysm Flare Bomb/Wither Howitzer and Iron's Immolate were not equivalent cases and therefore retain explicit parity bridges.
+
 ## Runtime follow-up
 
 The retained Reversal and Spirit Damage Helper adapters are deliberately conservative candidates for future removal. If local Forge/Arclight testing confirms that their effects always inherit `MagicEffectAttributionIndex` context, they should be removed rather than maintained indefinitely.
 
-Runtime validation should focus on mechanism classes rather than exhaustive spell lists: direct hostile/support spells, standard targeting, projectile, AOE, delayed entity, delayed effect/Rend-like damage, summon/root-owner, attributed potion/cloud, forced movement/fire/effect removal, one item/armor exception, and Magic Team disabled mode.
+Runtime validation should focus on mechanism classes rather than exhaustive spell lists: direct hostile/support spells, standard targeting, projectile, AOE, delayed entity, delayed effect/Rend-like damage, summon/root-owner, attributed potion/cloud, forced movement/fire/effect removal, Iron's command cast, Immolate chaining, the two published Cataclysm projectile exceptions, one item/armor exception, and Magic Team disabled mode.
