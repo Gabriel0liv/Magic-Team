@@ -20,7 +20,9 @@
     "UtilsMixin",
     "DamageSourcesMixin",
     "LivingEntityMixin",
-    "MagicManagerCastDispatchMixin"
+    "MagicManagerCastDispatchMixin",
+    "CastCommandMixin",
+    "ImmolateEffectMixin"
   ],
   "client": [],
   "injectors": {
