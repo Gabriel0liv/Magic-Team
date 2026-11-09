@@ -1,5 +1,8 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicAttribution;
+import com.gabri.magicteam.util.MagicAttributionIndex;
+import com.gabri.magicteam.util.MagicEffectAttributionIndex;
 import com.gabri.magicteam.util.MagicTeamEffectContext;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
@@ -21,7 +24,7 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onAddEffect(MobEffectInstance effectInstance, CallbackInfoReturnable<Boolean> cir) {
-        if (MagicTeamEffectContext.isVanillaPotionApplication()) {
+        if (MagicTeamEffectContext.isVanillaPotionApplication() || !TeamUtils.isEnabled()) {
             return;
         }
 
@@ -32,9 +35,35 @@ public class LivingEntityMixin {
 
         LivingEntity target = (LivingEntity) (Object) this;
         AbstractSpell spell = MagicTeamEffectContext.getSpell();
-        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell)) {
+        MagicAttribution attribution = resolveAttribution(source);
+        MagicTeamEffectContext.InteractionType interactionType = MagicTeamEffectContext.getInteractionType();
+        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell, attribution, interactionType)) {
             cir.setReturnValue(false);
         }
+    }
+
+    @Inject(
+            method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z",
+            at = @At("RETURN")
+    )
+    private void magicTeam$recordEffectAttribution(MobEffectInstance effectInstance,
+                                                   CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled() || effectInstance == null || !cir.getReturnValueZ()) {
+            return;
+        }
+
+        MagicAttribution attribution = MagicTeamEffectContext.currentAttribution();
+        if (attribution == null) {
+            return;
+        }
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        MagicEffectAttributionIndex.record(
+                target,
+                effectInstance,
+                attribution,
+                target.level().getGameTime()
+        );
     }
 
     @Inject(
@@ -43,7 +72,7 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onAddEffectWithSource(MobEffectInstance effectInstance, Entity source, CallbackInfoReturnable<Boolean> cir) {
-        if (MagicTeamEffectContext.isVanillaPotionApplication()) {
+        if (MagicTeamEffectContext.isVanillaPotionApplication() || !TeamUtils.isEnabled()) {
             return;
         }
 
@@ -53,9 +82,36 @@ public class LivingEntityMixin {
 
         LivingEntity target = (LivingEntity) (Object) this;
         AbstractSpell spell = MagicTeamEffectContext.getSpell();
-        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell)) {
+        MagicAttribution attribution = resolveAttribution(source);
+        MagicTeamEffectContext.InteractionType interactionType = MagicTeamEffectContext.getInteractionType();
+        if (!TeamUtils.shouldAllowEffect(source, target, effectInstance, spell, attribution, interactionType)) {
             cir.setReturnValue(false);
         }
+    }
+
+    @Inject(
+            method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("RETURN")
+    )
+    private void magicTeam$recordEffectAttributionWithSource(MobEffectInstance effectInstance,
+                                                             Entity source,
+                                                             CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled() || effectInstance == null || source == null || !cir.getReturnValueZ()) {
+            return;
+        }
+
+        MagicAttribution attribution = resolveAttribution(source);
+        if (attribution == null) {
+            return;
+        }
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        MagicEffectAttributionIndex.record(
+                target,
+                effectInstance,
+                attribution,
+                target.level().getGameTime()
+        );
     }
 
     @Inject(
@@ -64,12 +120,7 @@ public class LivingEntityMixin {
             cancellable = true
     )
     private void onHurt(DamageSource damageSource, float amount, CallbackInfoReturnable<Boolean> cir) {
-        if (!MagicTeamEffectContext.shouldFilterDamage() || damageSource == null) {
-            return;
-        }
-
-        Entity source = MagicTeamEffectContext.getSource();
-        if (source == null) {
+        if (!TeamUtils.isEnabled() || damageSource == null) {
             return;
         }
 
@@ -79,25 +130,43 @@ public class LivingEntityMixin {
             attacker = damageSource.getDirectEntity();
         }
 
+        Entity contextSource = MagicTeamEffectContext.getSource();
         if (attacker == null) {
-            attacker = source;
+            attacker = contextSource;
         }
-
         if (attacker == null) {
             return;
         }
 
-        // A context is only allowed to classify damage produced by the same resolved owner.
-        // This prevents a stale context from one spell/AOE from reclassifying unrelated damage.
-        Entity contextOwner = TeamUtils.getRootOwner(source);
-        Entity attackerOwner = TeamUtils.getRootOwner(attacker);
-        if (contextOwner != null && attackerOwner != null && contextOwner != attackerOwner) {
-            return;
-        }
-
+        MagicAttribution attribution = resolveAttribution(attacker);
         AbstractSpell spell = MagicTeamEffectContext.getSpell();
-        if (TeamUtils.shouldBlockMagicDamage(attacker, target, spell)) {
+        MagicTeamEffectContext.InteractionType interactionType = MagicTeamEffectContext.getInteractionType();
+
+        boolean hasMagicEvidence = spell != null
+                || attribution != null
+                || MagicTeamEffectContext.shouldFilterDamage();
+        if (!hasMagicEvidence) {
+            return;
+        }
+
+        if (contextSource != null && attribution == null) {
+            Entity contextOwner = TeamUtils.getRootOwner(contextSource);
+            Entity attackerOwner = TeamUtils.getRootOwner(attacker);
+            if (contextOwner != null && attackerOwner != null && contextOwner != attackerOwner) {
+                return;
+            }
+        }
+
+        if (TeamUtils.shouldBlockMagicDamage(attacker, target, spell, attribution, interactionType)) {
             cir.setReturnValue(false);
         }
+    }
+
+    private static MagicAttribution resolveAttribution(Entity source) {
+        MagicAttribution current = MagicTeamEffectContext.currentAttribution();
+        if (current != null) {
+            return current;
+        }
+        return MagicAttributionIndex.get(source, source.level().getGameTime());
     }
 }

@@ -1,0 +1,29 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.gabri.magicteam.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "magic_team.refmap.json",
+  "plugin": "com.gabri.magicteam.mixin.compat.OptionalAddonMixinPlugin",
+  "mixins": [
+    "compat.traveloptics.AbyssalHideFriendlyFireMixin",
+    "compat.traveloptics.AbyssalStrikeFriendlyFireMixin",
+    "compat.traveloptics.ChargedSandsLevelOneFriendlyFireMixin",
+    "compat.traveloptics.ChargedSandsLevelTwoFriendlyFireMixin",
+    "compat.traveloptics.CursedWraithbladeFriendlyFireMixin",
+    "compat.traveloptics.FloodSlashFriendlyFireMixin",
+    "compat.traveloptics.ForgeServerEventsFriendlyFireMixin",
+    "compat.traveloptics.ForlornHarbingerFriendlyFireMixin",
+    "compat.traveloptics.GalenaShatterFriendlyFireMixin",
+    "compat.traveloptics.HarbingersWrathFriendlyFireMixin",
+    "compat.traveloptics.MechanizedExoskeletonFriendlyFireMixin",
+    "compat.traveloptics.PrimordialCrestFriendlyFireMixin",
+    "compat.traveloptics.ReversalFriendlyFireMixin",
+    "compat.traveloptics.SpiritDamageHelperFriendlyFireMixin",
+    "compat.traveloptics.TectonicCrestFriendlyFireMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

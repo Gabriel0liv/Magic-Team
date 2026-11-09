@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin;
 
+import com.gabri.magicteam.util.MagicTeamConfig;
 import com.gabri.magicteam.util.TeamUtils;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
@@ -21,12 +22,24 @@ import net.minecraftforge.entity.PartEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.function.Predicate;
 
 @Mixin(value = Utils.class, remap = false)
 public class UtilsMixin {
+
+    /**
+     * Central gate for Iron's targeted-spell warning. Keeping the check on the
+     * notification helper itself also covers addons that reuse this Iron's API.
+     */
+    @Inject(method = "sendTargetedNotification", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void onSendTargetedNotification(ServerPlayer target, LivingEntity caster, AbstractSpell spell, CallbackInfo ci) {
+        if (TeamUtils.isEnabled() && !MagicTeamConfig.SERVER.targetNotificationEnabled()) {
+            ci.cancel();
+        }
+    }
 
     @Inject(
             method = "preCastTargetHelper(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lio/redspace/ironsspellbooks/api/magic/MagicData;Lio/redspace/ironsspellbooks/api/spells/AbstractSpell;IFZLjava/util/function/Predicate;)Z",
@@ -35,6 +48,10 @@ public class UtilsMixin {
             remap = false
     )
     private static void onPreCastTargetHelper(Level level, LivingEntity caster, MagicData playerMagicData, AbstractSpell spell, int range, float aimAssist, boolean sendFailureMessage, Predicate<LivingEntity> filter, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         if (level == null || caster == null || playerMagicData == null || spell == null) {
             return;
         }
@@ -100,6 +117,10 @@ public class UtilsMixin {
             remap = false
     )
     private static void onShouldHealEntity(Entity healer, Entity target, CallbackInfoReturnable<Boolean> cir) {
+        if (!TeamUtils.isEnabled()) {
+            return;
+        }
+
         if (!TeamUtils.shouldAllowHealing(healer, target)) {
             cir.setReturnValue(false);
         }
