@@ -97,21 +97,31 @@ jobs:
               refmap = json.load(handle)
 
           mappings = refmap.get('mappings', {})
-          aoe = mappings.get('com/gabri/magicteam/mixin/compat/irons/AoeEntityFriendlyFireMixin', {})
-          expected_method = 'Lio/redspace/ironsspellbooks/entity/spells/AoeEntity;m_5603_(Lnet/minecraft/world/entity/Entity;)Z'
-          expected_call = 'Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z'
 
-          if aoe.get('canHitEntity(Lnet/minecraft/world/entity/Entity;)Z') != expected_method:
-              raise SystemExit('Iron AoeEntity#canHitEntity did not remap to runtime m_5603_')
-          if aoe.get('Lnet/minecraft/world/entity/Entity;isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z') != expected_call:
-              raise SystemExit('Entity#isAlliedTo did not remap to runtime m_7307_')
+          # Core hooks whose Mojmap names must remap to SRG for production.
+          expected = {
+              ('com/gabri/magicteam/mixin/EntityMixin', 'isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z'):
+                  'Lnet/minecraft/world/entity/Entity;m_7307_(Lnet/minecraft/world/entity/Entity;)Z',
+              ('com/gabri/magicteam/mixin/LivingEntityMixin', 'hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z'):
+                  'Lnet/minecraft/world/entity/LivingEntity;m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z',
+              ('com/gabri/magicteam/mixin/AbstractSpellCastingMobDispatchMixin', 'customServerAiStep'):
+                  'Lio/redspace/ironsspellbooks/entity/mobs/abstract_spell_casting_mob/AbstractSpellCastingMob;m_8024_()V',
+              ('com/gabri/magicteam/mixin/EntityMagicAttributionMixin', 'tickNonPassenger'):
+                  'Lnet/minecraft/server/level/ServerLevel;m_8647_(Lnet/minecraft/world/entity/Entity;)V',
+              ('com/gabri/magicteam/mixin/EntityMagicAttributionMixin', 'tickPassenger'):
+                  'Lnet/minecraft/server/level/ServerLevel;m_8662_(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;)V',
+          }
 
-          mob = mappings.get('com/gabri/magicteam/mixin/AbstractSpellCastingMobDispatchMixin', {})
-          expected_mob_tick = 'Lio/redspace/ironsspellbooks/entity/mobs/abstract_spell_casting_mob/AbstractSpellCastingMob;m_8024_()V'
-          if mob.get('customServerAiStep') != expected_mob_tick:
-              raise SystemExit('AbstractSpellCastingMob#customServerAiStep did not remap to runtime m_8024_')
+          failures = []
+          for (mixin, key), runtime in expected.items():
+              actual = mappings.get(mixin, {}).get(key)
+              if actual != runtime:
+                  failures.append(f'{mixin} {key}: expected {runtime}, got {actual}')
 
-          print('Critical runtime mappings verified: AoeEntity m_5603_, Entity m_7307_, mob tick m_8024_.')
+          if failures:
+              raise SystemExit('Refmap is missing critical runtime mappings:\n' + '\n'.join(failures))
+
+          print(f'Critical runtime mappings verified ({len(expected)}).')
           PY
 
       - name: Upload built jar and refmap

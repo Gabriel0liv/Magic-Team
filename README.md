@@ -95,9 +95,11 @@ Malformed JSON is rejected instead of being saved.
 * **Server Dependencies**: Iron's Spells 'n Spellbooks and Babel Core
 * **Side**: Server-side
 
-Magic Team 2.4.0 uses the shared Iron's/global runtime pipeline as its primary addon-compatibility model. Normal addon spells should not require one Magic Team mixin per spell: cast context, selected targets, spell damage, projectiles, AOEs, delayed entities, delayed MobEffects and common hostile side effects are handled by shared hooks whenever enough attribution exists.
+Magic Team 2.5.0 uses the shared Iron's/global runtime pipeline as its primary addon-compatibility model. Normal addon spells should not require one Magic Team mixin per spell: cast context, selected targets, spell damage, projectiles, AOEs, delayed entities, delayed MobEffects and common hostile side effects are handled by shared hooks whenever enough attribution exists.
 
 A small optional compatibility layer remains only for mechanisms outside that pipeline, such as item/armor abilities, Forge-event retaliation and transactions where blocking final damage would still leave another offensive side effect. Those configs are `required:false` with zero required injector matches. A missing/changed optional injection point therefore does not become a fatal 0/1 match failure. Prepare-time adapter failures can be skipped with a warning; apply-time transformation failures preserve Mixin's own safety action instead of forcing the server to continue with a potentially partially transformed class.
+
+Since 2.5.0 most item/armor/effect adapters are *context bridges*: they only mark the addon ability method as hostile magic from its user, and the shared hooks do the rest. An adapter therefore depends on a method name, not on how the addon compiles the method body. On server start Magic Team logs `Magic Team optional adapters: X active, Y inert`; every adapter that loaded for an installed addon but injected nothing (usually because the addon changed) is reported as `INERT`.
 
 The previous fragile per-spell redirects, including the Orbital Void redirect that depended on a specific addon-internal `isAlliedTo` call, are no longer part of the normal architecture. Addons that register normal `AbstractSpell` entries continue to appear in spell command autocomplete without needing a dedicated gameplay adapter.
 
