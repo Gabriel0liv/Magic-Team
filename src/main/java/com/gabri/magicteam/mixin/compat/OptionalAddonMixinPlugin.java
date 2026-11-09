@@ -1,5 +1,6 @@
 package com.gabri.magicteam.mixin.compat;
 
+import com.gabri.magicteam.util.OptionalAdapterDiagnostics;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.Mixins;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -11,9 +12,10 @@ import java.util.Set;
 /**
  * Shared plugin for optional addon mixin configs.
  *
- * <p>The plugin deliberately does not decide whether a mixin should apply. Its
- * only bootstrap responsibility is registering the fail-soft error handler
- * before optional adapters are transformed.</p>
+ * <p>The plugin deliberately does not decide whether a mixin should apply. It
+ * registers the fail-soft error handler before optional adapters are
+ * transformed, and records after each application whether the adapter actually
+ * injected anything ({@link OptionalAdapterDiagnostics}).</p>
  */
 public final class OptionalAddonMixinPlugin implements IMixinConfigPlugin {
     private static boolean errorHandlerRegistered;
@@ -51,5 +53,10 @@ public final class OptionalAddonMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        try {
+            OptionalAdapterDiagnostics.recordApplied(targetClassName, targetClass, mixinClassName);
+        } catch (RuntimeException ignored) {
+            // Diagnostics must never affect class transformation.
+        }
     }
 }

@@ -15,18 +15,26 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public final class MagicTeamCommands {
+    /*
+     * suggestResource matches either the full ID or just the path, so typing
+     * "fire" suggests "irons_spellbooks:fireball" like vanilla ID arguments do.
+     */
     private static final SuggestionProvider<CommandSourceStack> SPELL_SUGGESTIONS = (context, builder) ->
-            SharedSuggestionProvider.suggest(
+            SharedSuggestionProvider.suggestResource(
                     SpellRegistry.REGISTRY.get().getValues().stream()
                             .map(AbstractSpell::getSpellId)
+                            .map(ResourceLocation::tryParse)
+                            .filter(Objects::nonNull)
                             .sorted(),
                     builder
             );
@@ -333,10 +341,11 @@ public final class MagicTeamCommands {
 
         source.sendSuccess(() -> Component.literal("--- Spells registradas (" + spells.size() + ") ---")
                 .withStyle(ChatFormatting.GOLD), false);
-        for (String spell : spells) {
-            source.sendSuccess(() -> Component.literal("- " + spell).withStyle(ChatFormatting.YELLOW), false);
-        }
-        return 1;
+        // One chat message for the whole list: Iron's plus addons register
+        // hundreds of spells, and one message per spell floods the chat.
+        String joined = String.join(", ", spells);
+        source.sendSuccess(() -> Component.literal(joined).withStyle(ChatFormatting.YELLOW), false);
+        return spells.size();
     }
 
     private static ResolvedSpell resolveSpell(CommandSourceStack source, String input) {

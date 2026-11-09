@@ -87,6 +87,14 @@ The migration removed per-spell/per-projectile adapters for normal target filter
 
 The published 2.3.1 `AnnihilationSpellMixin` remains removed because the current player/mob virtual dispatch wraps the entire addon spell override before `applyAoEDamageAndExplosion` executes, so the specific helper wrapper is redundant. Cataclysm Flare Bomb/Wither Howitzer and Iron's Immolate were not equivalent cases and therefore retain explicit parity bridges.
 
+## Adapter robustness update (2026-11-09)
+
+A bytecode check against `traveloptics-6.3.0`, `L_Enders_Cataclysm-3.16`, `gtbcs_geomancy_plus-2.0.0` and `alshanex_familiars-1.20.1_v3.8_HOTFIX` found seven Travel Optics redirects that never applied: Mixin matches INVOKE owners exactly, and the `isAlliedTo` calls were compiled against `LivingEntity`/`Player` (not `Entity`) or lived inside filter lambdas. With `defaultRequire: 0` they were silently inert.
+
+Item, armor and effect adapters now use a **context bridge** (`AdapterContextBridge`): HEAD/RETURN injects on the addon ability method mark it as hostile magic from its user, and the global gates do the rest (Babel `isAlliedTo` wherever it is called, `hurt`, effects, knockback, fire). An adapter therefore depends only on a method name, not on how the body is compiled. Harbinger's Wrath answers its own `isAllyOrTamed` helper at HEAD. Only three redirects remain, each for a documented reason (Familiars retaliation side effects, Tremor Step invulnerability reset, Reversal reflected-projectile owner), and none depends on call position.
+
+`OptionalAdapterDiagnostics` records, after each optional adapter is applied, how many calls into Magic Team handlers were injected. On server start Magic Team logs a summary and warns about every inert adapter whose addon is installed, so an addon update that breaks an adapter is visible in the log instead of only in gameplay.
+
 ## Runtime follow-up
 
 The retained Reversal and Spirit Damage Helper adapters are deliberately conservative candidates for future removal. If local Forge/Arclight testing confirms that their effects always inherit `MagicEffectAttributionIndex` context, they should be removed rather than maintained indefinitely.

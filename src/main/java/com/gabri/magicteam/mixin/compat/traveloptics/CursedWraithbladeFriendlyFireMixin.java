@@ -1,49 +1,36 @@
 package com.gabri.magicteam.mixin.compat.traveloptics;
 
-import com.gabri.magicteam.util.TeamUtils;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
+import com.gabri.magicteam.util.AdapterContextBridge;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Cursed Blast is an item ability, not an Iron's spell. Both the base weapon and
- * Evo 2 implementation directly call LivingEntity#hurt for the raycast victim
- * and nearby AOE targets. Evo 1 inherits the base method and Evo 3 inherits Evo 2.
+ * Cursed Wraithblade item ability damages targets directly, without spell attribution.
+ *
+ * <p>Context bridge: the whole ability runs as hostile magic from the
+ * player so the global gates protect allies (alliance checks, damage,
+ * effects, knockback and fire). Depends only on the method name, not on how
+ * its body is compiled; if the method disappears the adapter is skipped.</p>
  */
 @Pseudo
-@Mixin(
-        targets = {
+@Mixin(targets = {
                 "com.gametechbc.traveloptics.item.bossweapon.cursedwraithblade.CursedWraithbladeItem",
                 "com.gametechbc.traveloptics.item.bossweapon.cursedwraithblade.CursedWraithbladeLevelTwoItem"
-        },
-        remap = false
-)
+        }, remap = false)
 public abstract class CursedWraithbladeFriendlyFireMixin {
+    @Inject(method = "executeCursedBlast(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)V", at = @At("HEAD"), require = 0, remap = false)
+    private void magicTeam$beginAbility(Level level, Player player, ItemStack stack, CallbackInfo ci) {
+        AdapterContextBridge.beginHostile(player);
+    }
 
-    @Redirect(
-            method = "executeCursedBlast(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)V",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z",
-                    remap = false
-            ),
-            remap = false
-    )
-    private boolean magicTeam$gateCursedBlastDamage(LivingEntity target,
-                                                      DamageSource damageSource,
-                                                      float amount,
-                                                      Level level,
-                                                      Player attacker,
-                                                      ItemStack stack) {
-        if (attacker != null && target != null && TeamUtils.shouldBlockFriendlyFire(attacker, target)) {
-            return false;
-        }
-        return target.hurt(damageSource, amount);
+    @Inject(method = "executeCursedBlast(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)V", at = @At("RETURN"), require = 0, remap = false)
+    private void magicTeam$endAbility(Level level, Player player, ItemStack stack, CallbackInfo ci) {
+        AdapterContextBridge.end();
     }
 }

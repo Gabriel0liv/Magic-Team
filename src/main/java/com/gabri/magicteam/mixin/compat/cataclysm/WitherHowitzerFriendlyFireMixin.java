@@ -1,7 +1,6 @@
 package com.gabri.magicteam.mixin.compat.cataclysm;
 
-import com.gabri.magicteam.util.MagicTeamEffectContext;
-import com.gabri.magicteam.util.TeamUtils;
+import com.gabri.magicteam.util.AdapterContextBridge;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -22,29 +21,21 @@ public class WitherHowitzerFriendlyFireMixin {
 
     @Inject(method = "m_5790_(Lnet/minecraft/world/phys/EntityHitResult;)V", at = @At("HEAD"), require = 0)
     private void magicTeam$beginEntityHit(EntityHitResult hitResult, CallbackInfo ci) {
-        if (TeamUtils.isEnabled()) {
-            MagicTeamEffectContext.push((Entity) (Object) this, MagicTeamEffectContext.InteractionType.HARMFUL);
-        }
+        AdapterContextBridge.beginHostile((Entity) (Object) this);
     }
 
     @Inject(method = "m_5790_(Lnet/minecraft/world/phys/EntityHitResult;)V", at = @At("RETURN"), require = 0)
     private void magicTeam$endEntityHit(EntityHitResult hitResult, CallbackInfo ci) {
-        if (TeamUtils.isEnabled()) {
-            MagicTeamEffectContext.pop();
-        }
+        AdapterContextBridge.end();
     }
 
     @Inject(method = "m_6532_(Lnet/minecraft/world/phys/HitResult;)V", at = @At("HEAD"), require = 0)
     private void magicTeam$beginHit(HitResult hitResult, CallbackInfo ci) {
-        if (TeamUtils.isEnabled()) {
-            MagicTeamEffectContext.push((Entity) (Object) this, MagicTeamEffectContext.InteractionType.HARMFUL);
-        }
+        AdapterContextBridge.beginHostile((Entity) (Object) this);
     }
 
     @Inject(method = "m_6532_(Lnet/minecraft/world/phys/HitResult;)V", at = @At("RETURN"), require = 0)
     private void magicTeam$endHit(HitResult hitResult, CallbackInfo ci) {
-        if (TeamUtils.isEnabled()) {
-            MagicTeamEffectContext.pop();
-        }
+        AdapterContextBridge.end();
     }
 }
