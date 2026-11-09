@@ -222,3 +222,33 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
+
+// The *ContractTest classes are dependency-free main() checks, so the JUnit
+// `test` task never runs them. Execute each one and fail `check` on any error.
+def contractTests = tasks.register('contractTests') {
+    group = 'verification'
+    description = 'Runs the dependency-free *ContractTest main() checks.'
+    dependsOn 'testClasses'
+    doLast {
+        def failures = []
+        sourceSets.test.output.classesDirs.files.findAll { it.exists() }.each { dir ->
+            fileTree(dir).matching { include '**/*ContractTest.class'; exclude '**/*$*' }.each { file ->
+                def className = dir.toPath().relativize(file.toPath()).toString()
+                        .replace(File.separator, '.').replace('.class', '')
+                def result = project.javaexec {
+                    classpath = sourceSets.test.runtimeClasspath
+                    mainClass = className
+                    workingDir = projectDir
+                    ignoreExitValue = true
+                }
+                if (result.exitValue != 0) {
+                    failures << className
+                }
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new GradleException("Contract tests failed: ${failures.join(', ')}")
+        }
+    }
+}
+tasks.named('check') { dependsOn contractTests }

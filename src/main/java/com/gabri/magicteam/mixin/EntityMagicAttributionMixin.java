@@ -78,6 +78,59 @@ public abstract class EntityMagicAttributionMixin {
         }
     }
 
+    /*
+     * tickNonPassenger also ticks the vehicle's passengers. Without an explicit
+     * boundary a passenger (e.g. an ally's mob riding a summoned mount) would run
+     * its whole tick inside the vehicle's magic attribution: its rideTick motion
+     * and environmental damage would be filtered as the caster's hostile magic,
+     * and damage it deals would be attributed to the caster. Hide the vehicle's
+     * scope and give the passenger only its own attribution, if any.
+     */
+    @Unique
+    private static final int MAGIC_TEAM_PASSENGER_SUSPENDED = 1;
+
+    @Unique
+    private static final int MAGIC_TEAM_PASSENGER_PUSHED = 2;
+
+    @Unique
+    private static final ThreadLocal<Deque<Integer>> MAGIC_TEAM_PASSENGER_SCOPES =
+            ThreadLocal.withInitial(ArrayDeque::new);
+
+    @Inject(method = "tickPassenger", at = @At("HEAD"))
+    private void magicTeam$beginPassengerScope(Entity vehicle, Entity passenger, CallbackInfo ci) {
+        int flags = 0;
+        if (MagicTeamEffectContext.getDepth() > 0) {
+            MagicTeamEffectContext.suspend();
+            flags |= MAGIC_TEAM_PASSENGER_SUSPENDED;
+        }
+
+        if (passenger != null && TeamUtils.isEnabled()) {
+            ServerLevel level = (ServerLevel) (Object) this;
+            MagicAttribution attribution = MagicAttributionIndex.refresh(passenger, level.getGameTime());
+            if (attribution != null) {
+                MagicTeamEffectContext.push(passenger, attribution);
+                flags |= MAGIC_TEAM_PASSENGER_PUSHED;
+            }
+        }
+
+        MAGIC_TEAM_PASSENGER_SCOPES.get().push(flags);
+    }
+
+    @Inject(method = "tickPassenger", at = @At("RETURN"))
+    private void magicTeam$endPassengerScope(Entity vehicle, Entity passenger, CallbackInfo ci) {
+        Deque<Integer> scopes = MAGIC_TEAM_PASSENGER_SCOPES.get();
+        int flags = scopes.isEmpty() ? 0 : scopes.pop();
+        if ((flags & MAGIC_TEAM_PASSENGER_PUSHED) != 0) {
+            MagicTeamEffectContext.pop();
+        }
+        if ((flags & MAGIC_TEAM_PASSENGER_SUSPENDED) != 0) {
+            MagicTeamEffectContext.resume();
+        }
+        if (scopes.isEmpty()) {
+            MAGIC_TEAM_PASSENGER_SCOPES.remove();
+        }
+    }
+
     @Inject(
             method = "tick(Ljava/util/function/BooleanSupplier;)V",
             at = @At("RETURN")

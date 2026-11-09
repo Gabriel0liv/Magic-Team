@@ -9,7 +9,13 @@ public final class MagicSideEffectPolicy {
     }
 
     public static boolean shouldBlock(Entity target) {
-        if (!TeamUtils.isEnabled() || target == null) {
+        // Server-authoritative policy: client copies of entities must never read
+        // the (unloaded on remote clients) SERVER config or alter local physics.
+        if (target == null || target.level().isClientSide()) {
+            return false;
+        }
+
+        if (!TeamUtils.isEnabled()) {
             return false;
         }
 

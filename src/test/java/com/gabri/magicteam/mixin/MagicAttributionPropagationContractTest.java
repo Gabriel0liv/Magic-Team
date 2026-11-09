@@ -29,6 +29,10 @@ public final class MagicAttributionPropagationContractTest {
                         && serverBoundary.contains("@At(\"HEAD\")")
                         && serverBoundary.contains("@At(\"RETURN\")"),
                 "delayed attribution must wrap the stable tickNonPassenger method boundary");
+        check(serverBoundary.contains("method = \"tickPassenger\"")
+                        && serverBoundary.contains("MagicTeamEffectContext.suspend()")
+                        && serverBoundary.contains("MagicTeamEffectContext.resume()"),
+                "passengers ticked inside an attributed vehicle tick must not inherit the vehicle's magic scope");
         check(serverBoundary.contains("MAGIC_TEAM_TICK_SCOPES"),
                 "paired tick injections must track whether a magic context was actually pushed");
         check(serverBoundary.contains("MagicAttributionIndex.refresh(entity, level.getGameTime())"),

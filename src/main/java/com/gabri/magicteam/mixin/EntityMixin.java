@@ -22,11 +22,17 @@ public abstract class EntityMixin {
 
     @Inject(method = "isAlliedTo(Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), cancellable = true)
     private void onIsAlliedTo(Entity other, CallbackInfoReturnable<Boolean> cir) {
+        Entity self = (Entity) (Object) this;
+        // Server-authoritative: client entities keep vanilla alliance behavior
+        // and never read the SERVER config, which is not loaded on remote clients.
+        if (self.level().isClientSide()) {
+            return;
+        }
+
         if (!TeamUtils.isEnabled()) {
             return;
         }
 
-        Entity self = (Entity) (Object) this;
         if (!isMagicRelevant(self, other)) {
             return;
         }

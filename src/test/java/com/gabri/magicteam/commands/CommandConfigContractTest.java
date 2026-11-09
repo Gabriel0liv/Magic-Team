@@ -6,7 +6,6 @@ import java.nio.file.Path;
 /** Dependency-free source contract for the public Magic Team command/config surface. */
 public final class CommandConfigContractTest {
     private static final Path COMMANDS = Path.of("src/main/java/com/gabri/magicteam/MagicTeamCommands.java");
-    private static final Path SPELL_ARGUMENT = Path.of("src/main/java/com/gabri/magicteam/command/SpellIdArgumentType.java");
     private static final Path CONFIG = Path.of("src/main/java/com/gabri/magicteam/util/MagicTeamConfig.java");
     private static final Path TEAM_UTILS = Path.of("src/main/java/com/gabri/magicteam/util/TeamUtils.java");
     private static final Path ENTITY_MIXIN = Path.of("src/main/java/com/gabri/magicteam/mixin/EntityMixin.java");
@@ -18,7 +17,6 @@ public final class CommandConfigContractTest {
 
     public static void main(String[] args) throws Exception {
         String commands = Files.readString(COMMANDS);
-        String spellArgument = Files.readString(SPELL_ARGUMENT);
         String config = Files.readString(CONFIG);
         String teamUtils = Files.readString(TEAM_UTILS);
         String entityMixin = Files.readString(ENTITY_MIXIN);
@@ -51,14 +49,14 @@ public final class CommandConfigContractTest {
         check(!commands.contains("Commands.literal(\"filter\")"), "legacy filter command must be removed");
         check(!commands.contains("Commands.literal(\"save\")"), "manual save command must be removed");
 
-        check(commands.contains("SpellIdArgumentType.spellId()"),
+        // The custom SpellIdArgumentType was replaced by vanilla's serializable
+        // ResourceLocationArgument (see CommandArgumentSerializationContractTest).
+        check(commands.contains("Commands.argument(\"spell\", ResourceLocationArgument.id())"),
                 "spell commands need an argument parser that accepts namespaced IDs like irons_spellbooks:fireball");
-        check(commands.contains("SpellIdArgumentType.getSpellId"),
-                "spell command handlers must read the namespaced spell token from the custom argument");
+        check(commands.contains("ResourceLocationArgument.getId(context, \"spell\")"),
+                "spell command handlers must read the namespaced spell ID from the vanilla argument");
         check(!commands.contains("Commands.argument(\"spell\", StringArgumentType.word())"),
                 "StringArgumentType.word() rejects ':' and must not be used for spell IDs");
-        check(spellArgument.contains("!Character.isWhitespace(reader.peek())"),
-                "spell ID parser must consume the complete non-whitespace token, including ':' and '/' characters");
 
         check(config.contains("BooleanValue enabled"), "server config needs persistent enabled flag");
         check(config.contains("BooleanValue blockedMessageEnabled"), "server config needs message enabled flag");
@@ -95,7 +93,15 @@ public final class CommandConfigContractTest {
         String effectGate = isolate(teamUtils,
                 "public static boolean shouldAllowEffect(Entity source, Entity target, MobEffectInstance effectInstance,",
                 "public static boolean shouldBlockMagicDamage(Entity attacker, Entity target)");
-        check(effectGate.contains("getSpellOverride"),
+        // Effect filtering resolves behavior through resolveMagicBehavior, which
+        // applies admin overrides for both live spells and persisted attribution.
+        check(effectGate.contains("getSpellOverride") || effectGate.contains("resolveMagicBehavior"),
+                "spell effect filtering must go through override-aware behavior resolution");
+        String behaviorResolution = isolate(teamUtils,
+                "public static SpellBehavior resolveMagicBehavior(",
+                "public static Entity resolveMagicSource(");
+        check(behaviorResolution.contains("getSpellBehavior(spell)")
+                        && behaviorResolution.contains("getSpellOverride(attribution.spellId())"),
                 "explicit admin overrides must take precedence when filtering spell effects");
     }
 

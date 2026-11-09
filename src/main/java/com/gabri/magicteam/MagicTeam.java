@@ -35,7 +35,7 @@ public class MagicTeam {
         }
 
         int depth = MagicTeamEffectContext.getDepth();
-        if (depth > 0) {
+        if (depth > 0 || MagicTeamEffectContext.getSuspendedDepth() > 0) {
             String context = MagicTeamEffectContext.describeCurrentContext();
             LOGGER.warn("Magic-Team detected a leaked effect context at server tick end; clearing it to prevent unrelated damage/effects from inheriting the stale scope. {}", context);
             MagicTeamEffectContext.clear();

@@ -8,7 +8,16 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public final class MagicTeamEffectContext {
-    private static final ThreadLocal<Deque<Context>> CURRENT = ThreadLocal.withInitial(ArrayDeque::new);
+    /*
+     * No initial value on purpose: read paths run on hot vanilla hooks
+     * (setDeltaMovement, hurt, addEffect, isAlliedTo) for every entity, so an
+     * empty context must be a plain null check with no allocation or
+     * ThreadLocalMap mutation.
+     */
+    private static final ThreadLocal<Deque<Context>> CURRENT = new ThreadLocal<>();
+    /** Contexts hidden by {@link #suspend()} so an unrelated nested tick cannot inherit them. */
+    private static final ThreadLocal<Deque<Deque<Context>>> SUSPENDED = new ThreadLocal<>();
+    private static final Deque<Context> EMPTY_SUSPENDED_MARKER = new ArrayDeque<>(0);
     private static final long DEFAULT_ATTRIBUTION_TTL_TICKS = 20L * 60L * 5L;
 
     public enum Origin {
@@ -72,7 +81,12 @@ public final class MagicTeamEffectContext {
                              InteractionType interactionType,
                              MagicAttribution persistentAttribution) {
         InteractionType normalizedInteraction = interactionType == null ? InteractionType.GENERIC : interactionType;
-        CURRENT.get().push(new Context(
+        Deque<Context> stack = CURRENT.get();
+        if (stack == null) {
+            stack = new ArrayDeque<>();
+            CURRENT.set(stack);
+        }
+        stack.push(new Context(
                 source,
                 spell,
                 castSource,
@@ -84,6 +98,10 @@ public final class MagicTeamEffectContext {
 
     public static void pop() {
         Deque<Context> stack = CURRENT.get();
+        if (stack == null) {
+            return;
+        }
+
         if (!stack.isEmpty()) {
             stack.pop();
         }
@@ -93,17 +111,57 @@ public final class MagicTeamEffectContext {
         }
     }
 
+    /**
+     * Hides the whole current context stack until {@link #resume()}. Used when
+     * the server ticks an entity nested inside another entity's attributed
+     * tick (for example a passenger), which must not inherit that magic scope.
+     */
+    public static void suspend() {
+        Deque<Deque<Context>> suspended = SUSPENDED.get();
+        if (suspended == null) {
+            suspended = new ArrayDeque<>();
+            SUSPENDED.set(suspended);
+        }
+
+        Deque<Context> stack = CURRENT.get();
+        suspended.push(stack == null || stack.isEmpty() ? EMPTY_SUSPENDED_MARKER : stack);
+        CURRENT.remove();
+    }
+
+    /** Restores the stack hidden by the matching {@link #suspend()} call. */
+    public static void resume() {
+        Deque<Deque<Context>> suspended = SUSPENDED.get();
+        if (suspended == null || suspended.isEmpty()) {
+            SUSPENDED.remove();
+            return;
+        }
+
+        Deque<Context> restored = suspended.pop();
+        if (suspended.isEmpty()) {
+            SUSPENDED.remove();
+        }
+
+        if (restored == EMPTY_SUSPENDED_MARKER) {
+            CURRENT.remove();
+        } else {
+            CURRENT.set(restored);
+        }
+    }
+
     public static void clear() {
         CURRENT.remove();
+        SUSPENDED.remove();
     }
 
     public static int getDepth() {
         Deque<Context> stack = CURRENT.get();
-        int depth = stack.size();
-        if (depth == 0) {
-            CURRENT.remove();
-        }
-        return depth;
+        return stack == null ? 0 : stack.size();
+    }
+
+    /** Number of hidden stacks still waiting for {@link #resume()}; non-zero at tick end means a leak. */
+    public static int getSuspendedDepth() {
+        Deque<Deque<Context>> suspended = SUSPENDED.get();
+        return suspended == null ? 0 : suspended.size();
     }
 
     public static boolean hasContext() {
@@ -194,10 +252,9 @@ public final class MagicTeamEffectContext {
 
     public static String describeCurrentContext() {
         Deque<Context> stack = CURRENT.get();
-        Context context = stack.peek();
+        Context context = stack == null ? null : stack.peek();
         if (context == null) {
-            CURRENT.remove();
-            return "depth=0";
+            return "depth=0, suspended=" + getSuspendedDepth();
         }
 
         String sourceType = context.source == null ? "null" : context.source.getClass().getName();
@@ -215,11 +272,7 @@ public final class MagicTeamEffectContext {
 
     private static Context current() {
         Deque<Context> stack = CURRENT.get();
-        Context context = stack.peek();
-        if (context == null) {
-            CURRENT.remove();
-        }
-        return context;
+        return stack == null ? null : stack.peek();
     }
 
     private record Context(Entity source,

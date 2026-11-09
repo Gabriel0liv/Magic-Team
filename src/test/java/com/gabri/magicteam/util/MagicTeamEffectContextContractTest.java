@@ -49,6 +49,36 @@ public final class MagicTeamEffectContextContractTest {
 
         MagicTeamEffectContext.clear();
         check(!MagicTeamEffectContext.hasContext(), "clear removes all context state");
+        check(MagicTeamEffectContext.getSource() == null && MagicTeamEffectContext.getOrigin() == null,
+                "empty context reads are null without allocating state");
+        MagicTeamEffectContext.pop();
+        check(MagicTeamEffectContext.getDepth() == 0, "pop on an empty context is a safe no-op");
+
+        // Passenger boundary: a nested tick must not inherit the outer scope.
+        MagicTeamEffectContext.push((net.minecraft.world.entity.Entity) null,
+                MagicTeamEffectContext.InteractionType.HARMFUL);
+        MagicTeamEffectContext.suspend();
+        check(MagicTeamEffectContext.getDepth() == 0, "suspend hides the outer scope");
+        check(!MagicTeamEffectContext.shouldFilterDamage(), "suspended scope must not filter nested damage");
+        check(MagicTeamEffectContext.getSuspendedDepth() == 1, "suspend is tracked for leak detection");
+        MagicTeamEffectContext.push((net.minecraft.world.entity.Entity) null,
+                MagicTeamEffectContext.InteractionType.BENEFICIAL);
+        MagicTeamEffectContext.pop();
+        MagicTeamEffectContext.resume();
+        check(MagicTeamEffectContext.getDepth() == 1 && MagicTeamEffectContext.isHarmfulInteraction(),
+                "resume restores the outer scope intact");
+        check(MagicTeamEffectContext.getSuspendedDepth() == 0, "resume clears the suspended marker");
+        MagicTeamEffectContext.pop();
+
+        MagicTeamEffectContext.suspend();
+        MagicTeamEffectContext.resume();
+        check(MagicTeamEffectContext.getDepth() == 0, "suspending an empty context restores an empty context");
+
+        MagicTeamEffectContext.push((net.minecraft.world.entity.Entity) null);
+        MagicTeamEffectContext.suspend();
+        MagicTeamEffectContext.clear();
+        check(MagicTeamEffectContext.getDepth() == 0 && MagicTeamEffectContext.getSuspendedDepth() == 0,
+                "clear also drops suspended scopes");
     }
 
     private static void check(boolean condition, String message) {
